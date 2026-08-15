@@ -1,4 +1,4 @@
-# EasyControl
+# EasyCheck
 
 Statische Webseite für einen leichteren Überblick über die Arbeitszeit – für Auftragnehmer und Auftraggeber.
 

@@ -360,33 +360,6 @@ h2 {
   flex-shrink: 0;
 }
 
-/* ---------- Location box ---------- */
-.location-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--surface-border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-}
-.location-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.location-icon { font-size: 1.3rem; }
-.location-title { font-weight: 600; font-size: 0.92rem; }
-.location-status {
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  margin-top: 2px;
-}
-.location-status.ok { color: var(--success); }
-.location-status.err { color: var(--danger); }
-
 .error-msg {
   color: var(--danger);
   font-size: 0.84rem;

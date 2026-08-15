@@ -5,7 +5,6 @@
     "view-app-ag": "bottom-nav-ag",
   };
   const state = {
-    location: { auftragnehmer: null, auftraggeber: null },
     termine: { auftragnehmer: [], auftraggeber: [] },
     employees: [],
   };
@@ -213,7 +212,7 @@
     const now = new Date();
     if (!isLastDayOfMonth(now)) return;
 
-    const key = `easycontrol-monthly-popup-${now.getFullYear()}-${now.getMonth() + 1}`;
+    const key = `easycheck-monthly-popup-${now.getFullYear()}-${now.getMonth() + 1}`;
     if (localStorage.getItem(key)) return;
 
     localStorage.setItem(key, "1");
@@ -303,54 +302,6 @@
   const resetNavAn = setupBottomNav("bottom-nav-an", "view-app-an");
   const resetNavAg = setupBottomNav("bottom-nav-ag", "view-app-ag");
 
-  function setupLocationShare(role, buttonId, boxId, statusId, submitId) {
-    const btn = document.getElementById(buttonId);
-    const status = document.getElementById(statusId);
-    const submit = document.getElementById(submitId);
-
-    btn.addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        status.textContent = "Geolocation wird von deinem Browser nicht unterstützt.";
-        status.className = "location-status err";
-        return;
-      }
-      status.textContent = "Standort wird angefragt …";
-      status.className = "location-status";
-      btn.disabled = true;
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          state.location[role] = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          };
-          status.textContent = "Standort erfolgreich geteilt.";
-          status.className = "location-status ok";
-          btn.textContent = "Standort geteilt ✓";
-          btn.classList.add("granted");
-          btn.disabled = true;
-          updateSubmitState(role);
-        },
-        (err) => {
-          state.location[role] = null;
-          status.textContent = "Standort konnte nicht ermittelt werden. Bitte erlaube den Zugriff.";
-          status.className = "location-status err";
-          btn.disabled = false;
-          updateSubmitState(role);
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    });
-  }
-
-  function updateSubmitState(role) {
-    const submitId = role === "auftragnehmer" ? "an-submit" : "ag-submit";
-    document.getElementById(submitId).disabled = !state.location[role];
-  }
-
-  setupLocationShare("auftragnehmer", "an-share-location", "an-location-box", "an-location-status", "an-submit");
-  setupLocationShare("auftraggeber", "ag-share-location", "ag-location-box", "ag-location-status", "ag-submit");
-
   function goToAuftragnehmerDashboard(name, extra) {
     document.getElementById("an-welcome-name").textContent = name;
     document.getElementById("an-welcome-text").textContent =
@@ -392,10 +343,6 @@
       errorEl.textContent = "Bitte fülle alle Felder aus.";
       return;
     }
-    if (!state.location.auftragnehmer) {
-      errorEl.textContent = "Bitte teile deinen Standort, um fortzufahren.";
-      return;
-    }
     errorEl.textContent = "";
 
     if (document.getElementById("an-push").checked && "Notification" in window) {
@@ -403,7 +350,7 @@
     }
 
     goToAuftragnehmerDashboard(name,
-      `<div><b>E-Mail:</b> ${email}</div><div><b>Rolle:</b> Auftragnehmer</div><div><b>Standort:</b> geteilt ✓</div>`
+      `<div><b>E-Mail:</b> ${email}</div><div><b>Rolle:</b> Auftragnehmer</div>`
     );
   });
 
@@ -421,10 +368,6 @@
       errorEl.textContent = "Bitte fülle alle Felder aus.";
       return;
     }
-    if (!state.location.auftraggeber) {
-      errorEl.textContent = "Bitte teile deinen Standort, um fortzufahren.";
-      return;
-    }
     errorEl.textContent = "";
 
     if (document.getElementById("ag-push").checked && "Notification" in window) {
@@ -432,7 +375,7 @@
     }
 
     goToAuftraggeberDashboard(name,
-      `<div><b>E-Mail:</b> ${email}</div><div><b>Adresse:</b> ${address}, ${zip}</div><div><b>Standort:</b> geteilt ✓</div>`
+      `<div><b>E-Mail:</b> ${email}</div><div><b>Adresse:</b> ${address}, ${zip}</div>`
     );
   });
 })();
