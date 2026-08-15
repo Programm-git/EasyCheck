@@ -159,22 +159,22 @@
     </div>
   </section>
 
-  <!-- ============ APP / DASHBOARD ============ -->
-  <section id="view-app" class="view">
+  <!-- ============ APP / DASHBOARD: AUFTRAGNEHMER ============ -->
+  <section id="view-app-an" class="view">
     <div class="app-wrap">
 
       <!-- Home Tab -->
-      <div class="app-panel active" id="panel-home">
+      <div class="app-panel active" id="panel-an-home">
         <div class="card welcome-card">
           <div class="success-icon">✓</div>
-          <h2>Willkommen, <span id="welcome-name"></span>!</h2>
-          <p class="subtitle" id="welcome-text"></p>
-          <div class="summary-box" id="welcome-summary"></div>
+          <h2>Willkommen, <span id="an-welcome-name"></span>!</h2>
+          <p class="subtitle" id="an-welcome-text"></p>
+          <div class="summary-box" id="an-welcome-summary"></div>
         </div>
       </div>
 
       <!-- Kalender Tab -->
-      <div class="app-panel" id="panel-kalender">
+      <div class="app-panel" id="panel-an-kalender">
         <div class="card">
           <div class="panel-icon">📅</div>
           <h2>Kalender</h2>
@@ -183,12 +183,87 @@
       </div>
 
       <!-- Account Tab -->
-      <div class="app-panel" id="panel-account">
+      <div class="app-panel" id="panel-an-account">
         <div class="card">
           <div class="panel-icon">👤</div>
           <h2>Account</h2>
-          <div class="summary-box" id="account-summary"></div>
-          <button class="btn btn-ghost btn-block" id="btn-logout">Abmelden</button>
+          <div class="summary-box" id="an-account-summary"></div>
+          <button class="btn btn-ghost btn-block" id="btn-logout-an">Abmelden</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ APP / DASHBOARD: AUFTRAGGEBER ============ -->
+  <section id="view-app-ag" class="view">
+    <div class="app-wrap">
+
+      <!-- Home Tab -->
+      <div class="app-panel active" id="panel-ag-home">
+        <div class="card welcome-card">
+          <div class="success-icon">✓</div>
+          <h2>Willkommen, <span id="ag-welcome-name"></span>!</h2>
+          <p class="subtitle" id="ag-welcome-text"></p>
+
+          <div class="stat-row">
+            <div class="stat-tile">
+              <div class="stat-value" id="ag-stat-mitarbeiter">3</div>
+              <div class="stat-label">Mitarbeiter</div>
+            </div>
+            <div class="stat-tile">
+              <div class="stat-value" id="ag-stat-stunden">126,5</div>
+              <div class="stat-label">Stunden diese Woche</div>
+            </div>
+          </div>
+
+          <div class="summary-box" id="ag-welcome-summary"></div>
+        </div>
+      </div>
+
+      <!-- Mitarbeiter Tab -->
+      <div class="app-panel" id="panel-ag-mitarbeiter">
+        <div class="card">
+          <div class="panel-icon">👥</div>
+          <h2>Mitarbeiter</h2>
+          <p class="subtitle">Behalte die Arbeitszeiten deiner Auftragnehmer im Überblick.</p>
+
+          <div class="employee-list">
+            <div class="employee-row">
+              <div class="employee-avatar">LM</div>
+              <div class="employee-info">
+                <div class="employee-name">Lena Meier</div>
+                <div class="employee-meta">Heute erfasst: 6,5 Std.</div>
+              </div>
+              <span class="employee-status status-active">Aktiv</span>
+            </div>
+            <div class="employee-row">
+              <div class="employee-avatar">TK</div>
+              <div class="employee-info">
+                <div class="employee-name">Tom Krause</div>
+                <div class="employee-meta">Heute erfasst: 4,0 Std.</div>
+              </div>
+              <span class="employee-status status-active">Aktiv</span>
+            </div>
+            <div class="employee-row">
+              <div class="employee-avatar">SB</div>
+              <div class="employee-info">
+                <div class="employee-name">Sara Berger</div>
+                <div class="employee-meta">Zuletzt erfasst: gestern</div>
+              </div>
+              <span class="employee-status status-offline">Offline</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Tab -->
+      <div class="app-panel" id="panel-ag-account">
+        <div class="card">
+          <div class="panel-icon">👤</div>
+          <h2>Account</h2>
+          <div class="summary-box" id="ag-account-summary"></div>
+          <button class="btn btn-ghost btn-block" id="btn-logout-ag">Abmelden</button>
         </div>
       </div>
 
@@ -197,16 +272,31 @@
 
 </main>
 
-<nav class="bottom-nav" id="bottom-nav">
-  <button class="nav-btn active" data-panel="panel-home">
+<nav class="bottom-nav" id="bottom-nav-an">
+  <button class="nav-btn active" data-panel="panel-an-home">
     <span class="nav-icon">🏠</span>
     <span class="nav-label">Home</span>
   </button>
-  <button class="nav-btn" data-panel="panel-kalender">
+  <button class="nav-btn" data-panel="panel-an-kalender">
     <span class="nav-icon">📅</span>
     <span class="nav-label">Kalender</span>
   </button>
-  <button class="nav-btn" data-panel="panel-account">
+  <button class="nav-btn" data-panel="panel-an-account">
+    <span class="nav-icon">👤</span>
+    <span class="nav-label">Account</span>
+  </button>
+</nav>
+
+<nav class="bottom-nav" id="bottom-nav-ag">
+  <button class="nav-btn active" data-panel="panel-ag-home">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Home</span>
+  </button>
+  <button class="nav-btn" data-panel="panel-ag-mitarbeiter">
+    <span class="nav-icon">👥</span>
+    <span class="nav-label">Mitarbeiter</span>
+  </button>
+  <button class="nav-btn" data-panel="panel-ag-account">
     <span class="nav-icon">👤</span>
     <span class="nav-label">Account</span>
   </button>

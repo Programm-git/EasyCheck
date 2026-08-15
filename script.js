@@ -1,12 +1,22 @@
 (() => {
   const views = document.querySelectorAll(".view");
+  const appViewNavMap = {
+    "view-app-an": "bottom-nav-an",
+    "view-app-ag": "bottom-nav-ag",
+  };
   const state = {
     location: { auftragnehmer: null, auftraggeber: null },
   };
 
   function showView(id) {
     views.forEach(v => v.classList.toggle("active", v.id === id));
-    document.body.classList.toggle("show-nav", id === "view-app");
+
+    const navId = appViewNavMap[id];
+    document.body.classList.toggle("show-nav", !!navId);
+    document.querySelectorAll(".bottom-nav").forEach(nav => {
+      nav.classList.toggle("active", nav.id === navId);
+    });
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -20,23 +30,33 @@
   document.getElementById("btn-role-auftragnehmer").addEventListener("click", () => showView("view-form-auftragnehmer"));
   document.getElementById("btn-role-auftraggeber").addEventListener("click", () => showView("view-form-auftraggeber"));
 
-  document.getElementById("btn-logout").addEventListener("click", () => showView("view-start"));
+  document.getElementById("btn-logout-an").addEventListener("click", () => showView("view-start"));
+  document.getElementById("btn-logout-ag").addEventListener("click", () => showView("view-start"));
 
-  // Bottom navigation (Home / Kalender / Account)
-  const navButtons = document.querySelectorAll(".nav-btn");
-  const appPanels = document.querySelectorAll(".app-panel");
-  navButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      navButtons.forEach(b => b.classList.toggle("active", b === btn));
-      appPanels.forEach(p => p.classList.toggle("active", p.id === btn.dataset.panel));
-      window.scrollTo({ top: 0, behavior: "smooth" });
+  // Bottom navigation, scoped per dashboard (Auftragnehmer / Auftraggeber)
+  function setupBottomNav(navId, viewId) {
+    const nav = document.getElementById(navId);
+    const view = document.getElementById(viewId);
+    const navButtons = nav.querySelectorAll(".nav-btn");
+    const panels = view.querySelectorAll(".app-panel");
+
+    navButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        navButtons.forEach(b => b.classList.toggle("active", b === btn));
+        panels.forEach(p => p.classList.toggle("active", p.id === btn.dataset.panel));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
     });
-  });
 
-  function resetNav() {
-    navButtons.forEach(b => b.classList.toggle("active", b.dataset.panel === "panel-home"));
-    appPanels.forEach(p => p.classList.toggle("active", p.id === "panel-home"));
+    return function reset() {
+      const firstBtn = navButtons[0];
+      navButtons.forEach(b => b.classList.toggle("active", b === firstBtn));
+      panels.forEach(p => p.classList.toggle("active", p.id === firstBtn.dataset.panel));
+    };
   }
+
+  const resetNavAn = setupBottomNav("bottom-nav-an", "view-app-an");
+  const resetNavAg = setupBottomNav("bottom-nav-ag", "view-app-ag");
 
   function setupLocationShare(role, buttonId, boxId, statusId, submitId) {
     const btn = document.getElementById(buttonId);
@@ -86,19 +106,30 @@
   setupLocationShare("auftragnehmer", "an-share-location", "an-location-box", "an-location-status", "an-submit");
   setupLocationShare("auftraggeber", "ag-share-location", "ag-location-box", "ag-location-status", "ag-submit");
 
-  function goToWelcome(name, role, extra) {
-    document.getElementById("welcome-name").textContent = name;
-    document.getElementById("welcome-text").textContent =
-      role === "auftragnehmer"
-        ? "Dein Profil wurde erstellt. Du kannst deine Arbeitszeit jetzt ganz einfach erfassen und im Überblick behalten."
-        : "Dein Profil wurde erstellt. Du kannst die Arbeitszeiten deiner Auftragnehmer jetzt einfach kontrollieren und verwalten.";
+  function goToAuftragnehmerDashboard(name, extra) {
+    document.getElementById("an-welcome-name").textContent = name;
+    document.getElementById("an-welcome-text").textContent =
+      "Dein Profil wurde erstellt. Du kannst deine Arbeitszeit jetzt ganz einfach erfassen und im Überblick behalten.";
 
-    document.getElementById("welcome-summary").innerHTML = extra;
-    document.getElementById("account-summary").innerHTML =
+    document.getElementById("an-welcome-summary").innerHTML = extra;
+    document.getElementById("an-account-summary").innerHTML =
       `<div><b>Name:</b> ${name}</div>` + extra;
 
-    resetNav();
-    showView("view-app");
+    resetNavAn();
+    showView("view-app-an");
+  }
+
+  function goToAuftraggeberDashboard(name, extra) {
+    document.getElementById("ag-welcome-name").textContent = name;
+    document.getElementById("ag-welcome-text").textContent =
+      "Dein Profil wurde erstellt. Hier ist der Überblick über deine Mitarbeiter.";
+
+    document.getElementById("ag-welcome-summary").innerHTML = extra;
+    document.getElementById("ag-account-summary").innerHTML =
+      `<div><b>Name:</b> ${name}</div>` + extra;
+
+    resetNavAg();
+    showView("view-app-ag");
   }
 
   // Auftragnehmer form
@@ -123,7 +154,7 @@
       Notification.requestPermission().catch(() => {});
     }
 
-    goToWelcome(name, "auftragnehmer",
+    goToAuftragnehmerDashboard(name,
       `<div><b>E-Mail:</b> ${email}</div><div><b>Rolle:</b> Auftragnehmer</div><div><b>Standort:</b> geteilt ✓</div>`
     );
   });
@@ -152,7 +183,7 @@
       Notification.requestPermission().catch(() => {});
     }
 
-    goToWelcome(name, "auftraggeber",
+    goToAuftraggeberDashboard(name,
       `<div><b>E-Mail:</b> ${email}</div><div><b>Rolle:</b> Auftraggeber</div><div><b>Adresse:</b> ${address}, ${zip}</div><div><b>Standort:</b> geteilt ✓</div>`
     );
   });
