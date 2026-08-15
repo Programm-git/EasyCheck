@@ -7,6 +7,7 @@
   const state = {
     termine: { auftragnehmer: [], auftraggeber: [] },
     employees: [],
+    postfach: { auftragnehmer: [], auftraggeber: [] },
   };
 
   function showView(id) {
@@ -166,6 +167,29 @@
     `).join("");
   }
 
+  // ---------- Postfach ----------
+  function renderPostfach(role, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const messages = state.postfach[role];
+    if (messages.length === 0) {
+      container.innerHTML = `<div class="appointment-empty">Keine Nachrichten vorhanden.</div>`;
+      return;
+    }
+
+    container.innerHTML = messages.map(msg => `
+      <div class="message-row ${msg.unread ? "unread" : ""}">
+        <span class="message-dot"></span>
+        <div class="message-info">
+          <div class="message-sender">${escapeHtml(msg.sender)}</div>
+          <div class="message-text">${escapeHtml(msg.text)}</div>
+          <div class="message-time">${escapeHtml(msg.time)}</div>
+        </div>
+      </div>
+    `).join("");
+  }
+
   // ---------- Monatsübersicht (Popup am Monatsende) ----------
   const monthlyOverlay = document.getElementById("monthly-overlay");
   const monthlySubtitle = document.getElementById("monthly-subtitle");
@@ -263,6 +287,8 @@
   refreshCalendar("auftragnehmer");
   refreshCalendar("auftraggeber");
   renderEmployeeList();
+  renderPostfach("auftragnehmer", "an-postfach");
+  renderPostfach("auftraggeber", "ag-postfach");
 
   document.getElementById("btn-login").addEventListener("click", () => showView("view-role"));
   document.getElementById("btn-register").addEventListener("click", () => showView("view-role"));
