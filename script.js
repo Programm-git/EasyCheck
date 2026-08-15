@@ -13,12 +13,34 @@
 
     const navId = appViewNavMap[id];
     document.body.classList.toggle("show-nav", !!navId);
+    document.body.classList.toggle("role-ag", id === "view-app-ag");
     document.querySelectorAll(".bottom-nav").forEach(nav => {
       nav.classList.toggle("active", nav.id === navId);
     });
 
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
+  function generateInviteCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 6; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
+  }
+
+  const inviteCodeEl = document.getElementById("ag-invite-code");
+  const inviteCopyBtn = document.getElementById("ag-invite-copy");
+  inviteCopyBtn.addEventListener("click", () => {
+    const code = inviteCodeEl.textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).catch(() => {});
+    }
+    const original = inviteCopyBtn.textContent;
+    inviteCopyBtn.textContent = "Kopiert ✓";
+    setTimeout(() => { inviteCopyBtn.textContent = original; }, 1800);
+  });
 
   document.getElementById("btn-login").addEventListener("click", () => showView("view-role"));
   document.getElementById("btn-register").addEventListener("click", () => showView("view-role"));
@@ -128,6 +150,8 @@
     document.getElementById("ag-account-summary").innerHTML =
       `<div><b>Name:</b> ${name}</div>` + extra;
 
+    inviteCodeEl.textContent = generateInviteCode();
+
     resetNavAg();
     showView("view-app-ag");
   }
@@ -184,7 +208,7 @@
     }
 
     goToAuftraggeberDashboard(name,
-      `<div><b>E-Mail:</b> ${email}</div><div><b>Rolle:</b> Auftraggeber</div><div><b>Adresse:</b> ${address}, ${zip}</div><div><b>Standort:</b> geteilt ✓</div>`
+      `<div><b>E-Mail:</b> ${email}</div><div><b>Adresse:</b> ${address}, ${zip}</div><div><b>Standort:</b> geteilt ✓</div>`
     );
   });
 })();
