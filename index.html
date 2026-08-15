@@ -176,10 +176,19 @@
 
       <!-- Kalender Tab -->
       <div class="app-panel" id="panel-an-kalender">
-        <div class="card">
-          <div class="panel-icon">📅</div>
-          <h2>Kalender</h2>
-          <p class="subtitle">Hier findest du bald deine erfasste Arbeitszeit im Kalenderüberblick – Tag für Tag, Woche für Woche.</p>
+        <div class="card card-wide">
+          <div class="panel-header">
+            <div>
+              <div class="panel-icon">📅</div>
+              <h2>Kalender</h2>
+            </div>
+            <button type="button" class="fab-add" data-role="auftragnehmer" aria-label="Termin hinzufügen">+</button>
+          </div>
+          <p class="subtitle">Behalte deine Arbeitszeit und Termine im Überblick.</p>
+
+          <div class="calendar" id="an-calendar"></div>
+
+          <div class="appointment-list" id="an-appointments"></div>
         </div>
       </div>
 
@@ -260,10 +269,19 @@
 
       <!-- Kalender Tab -->
       <div class="app-panel" id="panel-ag-kalender">
-        <div class="card">
-          <div class="panel-icon">📅</div>
-          <h2>Kalender</h2>
-          <p class="subtitle">Hier siehst du bald die erfassten Arbeitszeiten deiner Mitarbeiter im Kalenderüberblick – Tag für Tag, Woche für Woche.</p>
+        <div class="card card-wide">
+          <div class="panel-header">
+            <div>
+              <div class="panel-icon">📅</div>
+              <h2>Kalender</h2>
+            </div>
+            <button type="button" class="fab-add" data-role="auftraggeber" aria-label="Termin hinzufügen">+</button>
+          </div>
+          <p class="subtitle">Behalte die Termine und Arbeitszeiten deiner Mitarbeiter im Überblick.</p>
+
+          <div class="calendar" id="ag-calendar"></div>
+
+          <div class="appointment-list" id="ag-appointments"></div>
         </div>
       </div>
 
@@ -329,6 +347,33 @@
 <footer class="footer">
   <span>© 2026 EasyControl</span>
 </footer>
+
+<!-- ============ TERMIN HINZUFÜGEN (Modal) ============ -->
+<div class="modal-overlay" id="termin-overlay">
+  <div class="modal-box">
+    <h2>Neuer Termin</h2>
+    <form id="form-termin">
+      <div class="field">
+        <label for="termin-title">Titel</label>
+        <input type="text" id="termin-title" required placeholder="z. B. Schicht, Meeting">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="termin-date">Datum</label>
+          <input type="date" id="termin-date" required>
+        </div>
+        <div class="field">
+          <label for="termin-time">Uhrzeit</label>
+          <input type="time" id="termin-time" required>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" id="termin-cancel">Abbrechen</button>
+        <button type="submit" class="btn btn-primary">Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>

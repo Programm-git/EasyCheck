@@ -6,6 +6,7 @@
   };
   const state = {
     location: { auftragnehmer: null, auftraggeber: null },
+    termine: { auftragnehmer: [], auftraggeber: [] },
   };
 
   function showView(id) {
@@ -41,6 +42,125 @@
     inviteCopyBtn.textContent = "Kopiert ✓";
     setTimeout(() => { inviteCopyBtn.textContent = original; }, 1800);
   });
+
+  // ---------- Kalender ----------
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function formatDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+  const monthShort = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+  const weekdayLabels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+  function renderCalendar(role, containerId) {
+    const container = document.getElementById(containerId);
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
+    const todayKey = formatDateKey(now);
+    const eventDates = new Set(state.termine[role].map(t => t.date));
+
+    let html = `<div class="calendar-header">${monthNames[month]} ${year}</div><div class="calendar-grid">`;
+    weekdayLabels.forEach(w => { html += `<div class="calendar-weekday">${w}</div>`; });
+    for (let i = 0; i < startWeekday; i++) {
+      html += `<div class="calendar-day"></div>`;
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateKey = formatDateKey(new Date(year, month, d));
+      const classes = ["calendar-day", "in-month"];
+      if (dateKey === todayKey) classes.push("today");
+      if (eventDates.has(dateKey)) classes.push("has-event");
+      html += `<div class="${classes.join(" ")}">${d}</div>`;
+    }
+    html += `</div>`;
+    container.innerHTML = html;
+  }
+
+  function renderAppointments(role, containerId) {
+    const container = document.getElementById(containerId);
+    const list = [...state.termine[role]].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+    if (list.length === 0) {
+      container.innerHTML = `<div class="appointment-empty">Noch keine Termine eingetragen.</div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(t => {
+      const [y, m, d] = t.date.split("-").map(Number);
+      return `<div class="appointment-row">
+        <div class="appointment-date"><div class="day">${d}</div><div class="month">${monthShort[m - 1]}</div></div>
+        <div class="appointment-info">
+          <div class="appointment-title">${escapeHtml(t.title)}</div>
+          <div class="appointment-time">${escapeHtml(t.time)} Uhr</div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  function refreshCalendar(role) {
+    if (role === "auftragnehmer") {
+      renderCalendar("auftragnehmer", "an-calendar");
+      renderAppointments("auftragnehmer", "an-appointments");
+    } else {
+      renderCalendar("auftraggeber", "ag-calendar");
+      renderAppointments("auftraggeber", "ag-appointments");
+    }
+  }
+
+  // ---------- Termin-Modal ----------
+  const terminOverlay = document.getElementById("termin-overlay");
+  const terminForm = document.getElementById("form-termin");
+  const terminTitleInput = document.getElementById("termin-title");
+  const terminDateInput = document.getElementById("termin-date");
+  const terminTimeInput = document.getElementById("termin-time");
+  let terminRole = null;
+
+  function closeTerminModal() {
+    terminOverlay.classList.remove("active");
+    terminRole = null;
+  }
+
+  document.querySelectorAll(".fab-add").forEach(btn => {
+    btn.addEventListener("click", () => {
+      terminRole = btn.dataset.role;
+      terminForm.reset();
+      terminOverlay.classList.add("active");
+      terminTitleInput.focus();
+    });
+  });
+
+  document.getElementById("termin-cancel").addEventListener("click", closeTerminModal);
+  terminOverlay.addEventListener("click", (e) => {
+    if (e.target === terminOverlay) closeTerminModal();
+  });
+
+  terminForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!terminRole) return;
+
+    const title = terminTitleInput.value.trim();
+    const date = terminDateInput.value;
+    const time = terminTimeInput.value;
+    if (!title || !date || !time) return;
+
+    state.termine[terminRole].push({ title, date, time });
+    refreshCalendar(terminRole);
+    closeTerminModal();
+  });
+
+  refreshCalendar("auftragnehmer");
+  refreshCalendar("auftraggeber");
 
   document.getElementById("btn-login").addEventListener("click", () => showView("view-role"));
   document.getElementById("btn-register").addEventListener("click", () => showView("view-role"));
