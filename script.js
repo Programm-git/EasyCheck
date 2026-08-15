@@ -108,6 +108,31 @@
     }).join("");
   }
 
+  function renderNextAppointment(role, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const now = new Date();
+    const nowKey = formatDateKey(now) + String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0");
+    const upcoming = state.termine[role]
+      .filter(t => (t.date + t.time.replace(":", "")) >= nowKey)
+      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
+
+    if (!upcoming) {
+      container.innerHTML = `<div class="upcoming-empty">Keine anstehenden Termine geplant.</div>`;
+      return;
+    }
+
+    const [y, m, d] = upcoming.date.split("-").map(Number);
+    container.innerHTML = `<div class="upcoming-item">
+      <div class="appointment-date"><div class="day">${d}</div><div class="month">${monthShort[m - 1]}</div></div>
+      <div class="appointment-info">
+        <div class="appointment-title">${escapeHtml(upcoming.title)}</div>
+        <div class="appointment-time">${escapeHtml(upcoming.time)} Uhr</div>
+      </div>
+    </div>`;
+  }
+
   function refreshCalendar(role) {
     if (role === "auftragnehmer") {
       renderCalendar("auftragnehmer", "an-calendar");
@@ -115,6 +140,7 @@
     } else {
       renderCalendar("auftraggeber", "ag-calendar");
       renderAppointments("auftraggeber", "ag-appointments");
+      renderNextAppointment("auftraggeber", "ag-next-appointment");
     }
   }
 
