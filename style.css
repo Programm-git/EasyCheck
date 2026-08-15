@@ -39,6 +39,7 @@ body {
   overflow: hidden;
   z-index: 0;
   pointer-events: none;
+  background: linear-gradient(160deg, #1a1233 0%, var(--bg) 45%, var(--bg) 55%, #0d2229 100%);
 }
 
 .bg-blob {
