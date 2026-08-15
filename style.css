@@ -748,7 +748,7 @@ body.show-nav .footer {
 }
 .message-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--surface-border);
@@ -765,7 +765,6 @@ body.show-nav .footer {
   height: 8px;
   border-radius: 50%;
   background: var(--accent-grad);
-  margin-top: 6px;
 }
 .message-info {
   flex: 1;
@@ -781,23 +780,45 @@ body.show-nav .footer {
   margin-top: 2px;
   line-height: 1.4;
 }
-.message-time {
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  margin-top: 4px;
-}
 .message-actions {
   display: flex;
   gap: 8px;
-  margin-top: 10px;
+  flex-shrink: 0;
 }
-.btn-sm {
-  padding: 7px 14px;
-  font-size: 0.8rem;
+.message-icon-btn {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.message-icon-btn:hover {
+  transform: translateY(-1px) scale(1.05);
+}
+.message-icon-btn.accept {
+  background: var(--accent-grad);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(124, 92, 255, 0.35);
+}
+.message-icon-btn.decline {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  border: 1px solid var(--surface-border);
+}
+.message-icon-btn.decline:hover {
+  color: var(--danger);
+  border-color: rgba(255, 107, 107, 0.4);
 }
 .message-status-badge {
   display: inline-block;
-  margin-top: 8px;
+  flex-shrink: 0;
 }
 
 /* ---------- Employee list (Auftraggeber Mitarbeiter) ---------- */

@@ -189,8 +189,8 @@
       if (msg.type === "termin-request" && msg.status === "pending") {
         actions = `
           <div class="message-actions">
-            <button type="button" class="btn btn-secondary btn-sm message-decline" data-id="${msg.id}">Ablehnen</button>
-            <button type="button" class="btn btn-primary btn-sm message-accept" data-id="${msg.id}">Annehmen</button>
+            <button type="button" class="message-icon-btn decline message-decline" data-id="${msg.id}" aria-label="Ablehnen">✗</button>
+            <button type="button" class="message-icon-btn accept message-accept" data-id="${msg.id}" aria-label="Annehmen">✓</button>
           </div>`;
       } else if (msg.type === "termin-request") {
         const accepted = msg.status === "accepted";
@@ -203,9 +203,8 @@
         <div class="message-info">
           <div class="message-sender">${escapeHtml(msg.sender)}</div>
           <div class="message-text">${escapeHtml(msg.text)}</div>
-          <div class="message-time">${escapeHtml(msg.time)}</div>
-          ${actions}
         </div>
+        ${actions}
       </div>`;
     }).join("");
   }
@@ -217,13 +216,14 @@
       || (fromRole === "auftragnehmer" ? "Ein Auftragnehmer" : "Ein Auftraggeber");
 
     const [y, m, d] = payload.date.split("-").map(Number);
-    const dateLabel = `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.${y}`;
+    const dateLabel = `${d}.${m}.${String(y).slice(-2)}`;
+    const [hh, mm] = payload.time.split(":");
+    const timeLabel = mm === "00" ? `${Number(hh)} Uhr` : `${payload.time} Uhr`;
 
     state.postfach[toRole].unshift({
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       sender: senderName,
-      text: `Terminanfrage: „${payload.title}“ am ${dateLabel} um ${payload.time} Uhr`,
-      time: "Gerade eben",
+      text: `${payload.title} am ${dateLabel} um ${timeLabel}`,
       unread: true,
       type: "termin-request",
       payload,
