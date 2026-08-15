@@ -73,8 +73,8 @@
     document.getElementById("welcome-name").textContent = name;
     document.getElementById("welcome-text").textContent =
       role === "auftragnehmer"
-        ? "Dein Profil als Auftragnehmer wurde erstellt. Du kannst nun Aufträge in deiner Nähe finden."
-        : "Dein Profil als Auftraggeber wurde erstellt. Du kannst nun Aufträge in deiner Nähe vergeben.";
+        ? "Dein Profil wurde erstellt. Du kannst deine Arbeitszeit jetzt ganz einfach erfassen und im Überblick behalten."
+        : "Dein Profil wurde erstellt. Du kannst die Arbeitszeiten deiner Auftragnehmer jetzt einfach kontrollieren und verwalten.";
 
     const summary = document.getElementById("welcome-summary");
     summary.innerHTML = extra;

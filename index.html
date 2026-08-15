@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JobConnect – Finde Auftragnehmer &amp; Auftraggeber</title>
+<title>EasyControl – Leichterer Überblick über deine Arbeitszeit</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
 <header class="topbar">
   <div class="brand">
     <span class="brand-dot"></span>
-    JobConnect
+    EasyControl
   </div>
 </header>
 
@@ -24,8 +24,8 @@
   <!-- ============ START ============ -->
   <section id="view-start" class="view active">
     <div class="card hero">
-      <h1>Finde den passenden <span class="accent">Job</span> oder den passenden <span class="accent">Auftrag</span>.</h1>
-      <p class="subtitle">Verbinde dich mit Auftragnehmern und Auftraggebern in deiner Nähe – schnell, sicher und unkompliziert.</p>
+      <h1>Ein leichterer <span class="accent">Überblick</span> über deine <span class="accent">Arbeitszeit</span>.</h1>
+      <p class="subtitle">EasyControl hilft dir, Arbeitszeiten einfach zu erfassen und zu kontrollieren – übersichtlich, sicher und unkompliziert.</p>
       <div class="btn-row">
         <button class="btn btn-primary" id="btn-login">Anmelden</button>
         <button class="btn btn-ghost" id="btn-register">Registrieren</button>
@@ -43,12 +43,12 @@
         <button class="role-card" id="btn-role-auftragnehmer">
           <div class="role-icon">🛠️</div>
           <div class="role-title">Auftragnehmer</div>
-          <div class="role-desc">Ich suche Aufträge und biete meine Dienstleistung an.</div>
+          <div class="role-desc">Ich möchte meine Arbeitszeit erfassen und im Überblick behalten.</div>
         </button>
         <button class="role-card" id="btn-role-auftraggeber">
           <div class="role-icon">📋</div>
           <div class="role-title">Auftraggeber</div>
-          <div class="role-desc">Ich möchte einen Auftrag vergeben.</div>
+          <div class="role-desc">Ich möchte die Arbeitszeiten meiner Mitarbeiter kontrollieren und verwalten.</div>
         </button>
       </div>
     </div>
@@ -59,7 +59,7 @@
     <div class="card">
       <button class="btn-back" data-back="view-role">&larr; Zurück</button>
       <h2>Anmelden als Auftragnehmer</h2>
-      <p class="subtitle">Erstelle dein Profil, um Aufträge in deiner Nähe zu finden.</p>
+      <p class="subtitle">Erstelle dein Profil, um deine Arbeitszeit einfach zu erfassen.</p>
 
       <form id="form-auftragnehmer" novalidate>
         <div class="field">
@@ -78,7 +78,7 @@
         <div class="field">
           <label class="checkbox-label">
             <input type="checkbox" id="an-push">
-            <span>Ich erlaube Push-Nachrichten, damit mich Auftraggeber später kontaktieren können.</span>
+            <span>Ich erlaube Push-Nachrichten, damit mich mein Auftraggeber später kontaktieren kann.</span>
           </label>
         </div>
 
@@ -105,7 +105,7 @@
     <div class="card">
       <button class="btn-back" data-back="view-role">&larr; Zurück</button>
       <h2>Anmelden als Auftraggeber</h2>
-      <p class="subtitle">Erstelle dein Profil, um passende Auftragnehmer zu finden.</p>
+      <p class="subtitle">Erstelle dein Profil, um die Arbeitszeiten deiner Auftragnehmer im Überblick zu behalten.</p>
 
       <form id="form-auftraggeber" novalidate>
         <div class="field">
@@ -135,7 +135,7 @@
         <div class="field">
           <label class="checkbox-label">
             <input type="checkbox" id="ag-push">
-            <span>Ich erlaube Push-Nachrichten, damit mich Auftragnehmer später kontaktieren können.</span>
+            <span>Ich erlaube Push-Nachrichten, damit ich meine Auftragnehmer später kontaktieren kann.</span>
           </label>
         </div>
 
@@ -171,7 +171,7 @@
 </main>
 
 <footer class="footer">
-  <span>© 2026 JobConnect</span>
+  <span>© 2026 EasyControl</span>
 </footer>
 
 <script src="script.js"></script>
