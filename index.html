@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobConnect – Finde Auftragnehmer &amp; Auftraggeber</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-blob blob1"></div>
+<div class="bg-blob blob2"></div>
+<div class="bg-blob blob3"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-dot"></span>
+    JobConnect
+  </div>
+</header>
+
+<main class="stage">
+
+  <!-- ============ START ============ -->
+  <section id="view-start" class="view active">
+    <div class="card hero">
+      <h1>Finde den passenden <span class="accent">Job</span> oder den passenden <span class="accent">Auftrag</span>.</h1>
+      <p class="subtitle">Verbinde dich mit Auftragnehmern und Auftraggebern in deiner Nähe – schnell, sicher und unkompliziert.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-login">Anmelden</button>
+        <button class="btn btn-ghost" id="btn-register">Registrieren</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ROLE SELECT (nach Anmelden) ============ -->
+  <section id="view-role" class="view">
+    <div class="card">
+      <button class="btn-back" data-back="view-start">&larr; Zurück</button>
+      <h2>Wie möchtest du dich anmelden?</h2>
+      <p class="subtitle">Wähle deine Rolle aus, um fortzufahren.</p>
+      <div class="role-grid">
+        <button class="role-card" id="btn-role-auftragnehmer">
+          <div class="role-icon">🛠️</div>
+          <div class="role-title">Auftragnehmer</div>
+          <div class="role-desc">Ich suche Aufträge und biete meine Dienstleistung an.</div>
+        </button>
+        <button class="role-card" id="btn-role-auftraggeber">
+          <div class="role-icon">📋</div>
+          <div class="role-title">Auftraggeber</div>
+          <div class="role-desc">Ich möchte einen Auftrag vergeben.</div>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FORM: AUFTRAGNEHMER ============ -->
+  <section id="view-form-auftragnehmer" class="view">
+    <div class="card">
+      <button class="btn-back" data-back="view-role">&larr; Zurück</button>
+      <h2>Anmelden als Auftragnehmer</h2>
+      <p class="subtitle">Erstelle dein Profil, um Aufträge in deiner Nähe zu finden.</p>
+
+      <form id="form-auftragnehmer" novalidate>
+        <div class="field">
+          <label for="an-name">Name</label>
+          <input type="text" id="an-name" required placeholder="Max Mustermann">
+        </div>
+        <div class="field">
+          <label for="an-email">E-Mail-Adresse</label>
+          <input type="email" id="an-email" required placeholder="max@beispiel.de">
+        </div>
+        <div class="field">
+          <label for="an-password">Passwort</label>
+          <input type="password" id="an-password" required minlength="6" placeholder="Mindestens 6 Zeichen">
+        </div>
+
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="an-push">
+            <span>Ich erlaube Push-Nachrichten, damit mich Auftraggeber später kontaktieren können.</span>
+          </label>
+        </div>
+
+        <div class="location-box" id="an-location-box">
+          <div class="location-info">
+            <span class="location-icon">📍</span>
+            <div>
+              <div class="location-title">Standort freigeben</div>
+              <div class="location-status" id="an-location-status">Erforderlich, um fortzufahren.</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary" id="an-share-location">Standort teilen</button>
+        </div>
+
+        <div class="error-msg" id="an-error"></div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="an-submit" disabled>Weiter</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ FORM: AUFTRAGGEBER ============ -->
+  <section id="view-form-auftraggeber" class="view">
+    <div class="card">
+      <button class="btn-back" data-back="view-role">&larr; Zurück</button>
+      <h2>Anmelden als Auftraggeber</h2>
+      <p class="subtitle">Erstelle dein Profil, um passende Auftragnehmer zu finden.</p>
+
+      <form id="form-auftraggeber" novalidate>
+        <div class="field">
+          <label for="ag-name">Name</label>
+          <input type="text" id="ag-name" required placeholder="Erika Musterfrau">
+        </div>
+        <div class="field">
+          <label for="ag-email">E-Mail-Adresse</label>
+          <input type="email" id="ag-email" required placeholder="erika@beispiel.de">
+        </div>
+        <div class="field">
+          <label for="ag-password">Passwort</label>
+          <input type="password" id="ag-password" required minlength="6" placeholder="Mindestens 6 Zeichen">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="ag-address">Wohnadresse</label>
+            <input type="text" id="ag-address" required placeholder="Musterstraße 1">
+          </div>
+          <div class="field field-small">
+            <label for="ag-zip">PLZ</label>
+            <input type="text" id="ag-zip" required inputmode="numeric" pattern="[0-9]*" placeholder="12345">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="ag-push">
+            <span>Ich erlaube Push-Nachrichten, damit mich Auftragnehmer später kontaktieren können.</span>
+          </label>
+        </div>
+
+        <div class="location-box" id="ag-location-box">
+          <div class="location-info">
+            <span class="location-icon">📍</span>
+            <div>
+              <div class="location-title">Standort freigeben</div>
+              <div class="location-status" id="ag-location-status">Erforderlich, um fortzufahren.</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary" id="ag-share-location">Standort teilen</button>
+        </div>
+
+        <div class="error-msg" id="ag-error"></div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="ag-submit" disabled>Weiter</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ WELCOME / DASHBOARD ============ -->
+  <section id="view-welcome" class="view">
+    <div class="card welcome-card">
+      <div class="success-icon">✓</div>
+      <h2>Willkommen, <span id="welcome-name"></span>!</h2>
+      <p class="subtitle" id="welcome-text"></p>
+      <div class="summary-box" id="welcome-summary"></div>
+      <button class="btn btn-primary" id="btn-logout">Zur Startseite</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>© 2026 JobConnect</span>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
