@@ -159,18 +159,58 @@
     </div>
   </section>
 
-  <!-- ============ WELCOME / DASHBOARD ============ -->
-  <section id="view-welcome" class="view">
-    <div class="card welcome-card">
-      <div class="success-icon">✓</div>
-      <h2>Willkommen, <span id="welcome-name"></span>!</h2>
-      <p class="subtitle" id="welcome-text"></p>
-      <div class="summary-box" id="welcome-summary"></div>
-      <button class="btn btn-primary" id="btn-logout">Zur Startseite</button>
+  <!-- ============ APP / DASHBOARD ============ -->
+  <section id="view-app" class="view">
+    <div class="app-wrap">
+
+      <!-- Home Tab -->
+      <div class="app-panel active" id="panel-home">
+        <div class="card welcome-card">
+          <div class="success-icon">✓</div>
+          <h2>Willkommen, <span id="welcome-name"></span>!</h2>
+          <p class="subtitle" id="welcome-text"></p>
+          <div class="summary-box" id="welcome-summary"></div>
+        </div>
+      </div>
+
+      <!-- Kalender Tab -->
+      <div class="app-panel" id="panel-kalender">
+        <div class="card">
+          <div class="panel-icon">📅</div>
+          <h2>Kalender</h2>
+          <p class="subtitle">Hier findest du bald deine erfasste Arbeitszeit im Kalenderüberblick – Tag für Tag, Woche für Woche.</p>
+        </div>
+      </div>
+
+      <!-- Account Tab -->
+      <div class="app-panel" id="panel-account">
+        <div class="card">
+          <div class="panel-icon">👤</div>
+          <h2>Account</h2>
+          <div class="summary-box" id="account-summary"></div>
+          <button class="btn btn-ghost btn-block" id="btn-logout">Abmelden</button>
+        </div>
+      </div>
+
     </div>
   </section>
 
 </main>
+
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="nav-btn active" data-panel="panel-home">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Home</span>
+  </button>
+  <button class="nav-btn" data-panel="panel-kalender">
+    <span class="nav-icon">📅</span>
+    <span class="nav-label">Kalender</span>
+  </button>
+  <button class="nav-btn" data-panel="panel-account">
+    <span class="nav-icon">👤</span>
+    <span class="nav-label">Account</span>
+  </button>
+</nav>
 
 <footer class="footer">
   <span>© 2026 EasyControl</span>

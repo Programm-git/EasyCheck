@@ -6,6 +6,7 @@
 
   function showView(id) {
     views.forEach(v => v.classList.toggle("active", v.id === id));
+    document.body.classList.toggle("show-nav", id === "view-app");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -20,6 +21,22 @@
   document.getElementById("btn-role-auftraggeber").addEventListener("click", () => showView("view-form-auftraggeber"));
 
   document.getElementById("btn-logout").addEventListener("click", () => showView("view-start"));
+
+  // Bottom navigation (Home / Kalender / Account)
+  const navButtons = document.querySelectorAll(".nav-btn");
+  const appPanels = document.querySelectorAll(".app-panel");
+  navButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      navButtons.forEach(b => b.classList.toggle("active", b === btn));
+      appPanels.forEach(p => p.classList.toggle("active", p.id === btn.dataset.panel));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+
+  function resetNav() {
+    navButtons.forEach(b => b.classList.toggle("active", b.dataset.panel === "panel-home"));
+    appPanels.forEach(p => p.classList.toggle("active", p.id === "panel-home"));
+  }
 
   function setupLocationShare(role, buttonId, boxId, statusId, submitId) {
     const btn = document.getElementById(buttonId);
@@ -76,9 +93,12 @@
         ? "Dein Profil wurde erstellt. Du kannst deine Arbeitszeit jetzt ganz einfach erfassen und im Überblick behalten."
         : "Dein Profil wurde erstellt. Du kannst die Arbeitszeiten deiner Auftragnehmer jetzt einfach kontrollieren und verwalten.";
 
-    const summary = document.getElementById("welcome-summary");
-    summary.innerHTML = extra;
-    showView("view-welcome");
+    document.getElementById("welcome-summary").innerHTML = extra;
+    document.getElementById("account-summary").innerHTML =
+      `<div><b>Name:</b> ${name}</div>` + extra;
+
+    resetNav();
+    showView("view-app");
   }
 
   // Auftragnehmer form
