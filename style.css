@@ -39,7 +39,6 @@ body {
   overflow: hidden;
   z-index: 0;
   pointer-events: none;
-  contain: strict;
 }
 
 .bg-blob {
@@ -49,8 +48,6 @@ body {
   opacity: 0.35;
   pointer-events: none;
   animation: float 16s ease-in-out infinite;
-  will-change: transform;
-  transform: translateZ(0);
 }
 .blob1 {
   width: 460px; height: 460px;
