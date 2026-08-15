@@ -168,8 +168,14 @@
   }
 
   // ---------- Postfach ----------
-  function renderPostfach(role, containerId) {
-    const container = document.getElementById(containerId);
+  const postfachContainerId = { auftragnehmer: "an-postfach", auftraggeber: "ag-postfach" };
+
+  function otherRole(role) {
+    return role === "auftragnehmer" ? "auftraggeber" : "auftragnehmer";
+  }
+
+  function renderPostfach(role) {
+    const container = document.getElementById(postfachContainerId[role]);
     if (!container) return;
 
     const messages = state.postfach[role];
@@ -178,16 +184,82 @@
       return;
     }
 
-    container.innerHTML = messages.map(msg => `
+    container.innerHTML = messages.map(msg => {
+      let actions = "";
+      if (msg.type === "termin-request" && msg.status === "pending") {
+        actions = `
+          <div class="message-actions">
+            <button type="button" class="btn btn-secondary btn-sm message-decline" data-id="${msg.id}">Ablehnen</button>
+            <button type="button" class="btn btn-primary btn-sm message-accept" data-id="${msg.id}">Annehmen</button>
+          </div>`;
+      } else if (msg.type === "termin-request") {
+        const accepted = msg.status === "accepted";
+        actions = `<span class="employee-status ${accepted ? "status-active" : "status-offline"} message-status-badge">${accepted ? "Angenommen ✓" : "Abgelehnt ✗"}</span>`;
+      }
+
+      return `
       <div class="message-row ${msg.unread ? "unread" : ""}">
         <span class="message-dot"></span>
         <div class="message-info">
           <div class="message-sender">${escapeHtml(msg.sender)}</div>
           <div class="message-text">${escapeHtml(msg.text)}</div>
           <div class="message-time">${escapeHtml(msg.time)}</div>
+          ${actions}
         </div>
-      </div>
-    `).join("");
+      </div>`;
+    }).join("");
+  }
+
+  function sendTerminRequest(fromRole, payload) {
+    const toRole = otherRole(fromRole);
+    const senderNameEl = document.getElementById(fromRole === "auftragnehmer" ? "an-welcome-name" : "ag-welcome-name");
+    const senderName = (senderNameEl && senderNameEl.textContent.trim())
+      || (fromRole === "auftragnehmer" ? "Ein Auftragnehmer" : "Ein Auftraggeber");
+
+    const [y, m, d] = payload.date.split("-").map(Number);
+    const dateLabel = `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.${y}`;
+
+    state.postfach[toRole].unshift({
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      sender: senderName,
+      text: `Terminanfrage: „${payload.title}“ am ${dateLabel} um ${payload.time} Uhr`,
+      time: "Gerade eben",
+      unread: true,
+      type: "termin-request",
+      payload,
+      fromRole,
+      status: "pending",
+    });
+
+    renderPostfach(toRole);
+  }
+
+  function setupPostfachActions(role) {
+    const container = document.getElementById(postfachContainerId[role]);
+    if (!container) return;
+
+    container.addEventListener("click", (e) => {
+      const acceptBtn = e.target.closest(".message-accept");
+      const declineBtn = e.target.closest(".message-decline");
+      if (!acceptBtn && !declineBtn) return;
+
+      const id = (acceptBtn || declineBtn).dataset.id;
+      const msg = state.postfach[role].find(m => m.id === id);
+      if (!msg) return;
+
+      if (acceptBtn) {
+        msg.status = "accepted";
+        state.termine[role].push(msg.payload);
+        state.termine[msg.fromRole].push(msg.payload);
+        refreshCalendar(role);
+        refreshCalendar(msg.fromRole);
+      } else {
+        msg.status = "declined";
+      }
+
+      msg.unread = false;
+      renderPostfach(role);
+    });
   }
 
   // ---------- Monatsübersicht (Popup am Monatsende) ----------
@@ -279,16 +351,17 @@
     const time = terminTimeInput.value;
     if (!title || !date || !time) return;
 
-    state.termine[terminRole].push({ title, date, time });
-    refreshCalendar(terminRole);
+    sendTerminRequest(terminRole, { title, date, time });
     closeTerminModal();
   });
 
   refreshCalendar("auftragnehmer");
   refreshCalendar("auftraggeber");
   renderEmployeeList();
-  renderPostfach("auftragnehmer", "an-postfach");
-  renderPostfach("auftraggeber", "ag-postfach");
+  renderPostfach("auftragnehmer");
+  renderPostfach("auftraggeber");
+  setupPostfachActions("auftragnehmer");
+  setupPostfachActions("auftraggeber");
 
   document.getElementById("btn-login").addEventListener("click", () => showView("view-role"));
   document.getElementById("btn-register").addEventListener("click", () => showView("view-role"));

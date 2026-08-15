@@ -786,6 +786,19 @@ body.show-nav .footer {
   color: var(--text-dim);
   margin-top: 4px;
 }
+.message-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.btn-sm {
+  padding: 7px 14px;
+  font-size: 0.8rem;
+}
+.message-status-badge {
+  display: inline-block;
+  margin-top: 8px;
+}
 
 /* ---------- Employee list (Auftraggeber Mitarbeiter) ---------- */
 .employee-list {
