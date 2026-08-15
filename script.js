@@ -7,6 +7,7 @@
   const state = {
     location: { auftragnehmer: null, auftraggeber: null },
     termine: { auftragnehmer: [], auftraggeber: [] },
+    employees: [],
   };
 
   function showView(id) {
@@ -144,6 +145,81 @@
     }
   }
 
+  // ---------- Mitarbeiterliste ----------
+  function renderEmployeeList() {
+    const container = document.getElementById("ag-employee-list");
+    if (!container) return;
+
+    if (state.employees.length === 0) {
+      container.innerHTML = `<div class="appointment-empty">Noch keine Mitarbeiter verbunden. Teile deinen Einladungscode, um Auftragnehmer hinzuzufügen.</div>`;
+      return;
+    }
+
+    container.innerHTML = state.employees.map(emp => `
+      <div class="employee-row">
+        <div class="employee-avatar">${escapeHtml(emp.initials || emp.name.slice(0, 2).toUpperCase())}</div>
+        <div class="employee-info">
+          <div class="employee-name">${escapeHtml(emp.name)}</div>
+          <div class="employee-meta">${emp.hours.toLocaleString("de-DE")} Std. diesen Monat</div>
+        </div>
+        <span class="employee-status ${emp.active ? "status-active" : "status-offline"}">${emp.active ? "Aktiv" : "Offline"}</span>
+      </div>
+    `).join("");
+  }
+
+  // ---------- Monatsübersicht (Popup am Monatsende) ----------
+  const monthlyOverlay = document.getElementById("monthly-overlay");
+  const monthlySubtitle = document.getElementById("monthly-subtitle");
+  const monthlyList = document.getElementById("monthly-employee-list");
+
+  function openMonthlySummary() {
+    const now = new Date();
+    monthlySubtitle.textContent = `Arbeitsstunden deiner Mitarbeiter im ${monthNames[now.getMonth()]} ${now.getFullYear()}.`;
+
+    if (state.employees.length === 0) {
+      monthlyList.innerHTML = `<div class="appointment-empty">Für diesen Monat liegen noch keine Mitarbeiterdaten vor.</div>`;
+    } else {
+      const sorted = [...state.employees].sort((a, b) => b.hours - a.hours);
+      monthlyList.innerHTML = sorted.map(emp => `
+        <div class="employee-row">
+          <div class="employee-avatar">${escapeHtml(emp.initials || emp.name.slice(0, 2).toUpperCase())}</div>
+          <div class="employee-info">
+            <div class="employee-name">${escapeHtml(emp.name)}</div>
+          </div>
+          <span class="employee-status status-active">${emp.hours.toLocaleString("de-DE")} Std.</span>
+        </div>
+      `).join("");
+    }
+
+    monthlyOverlay.classList.add("active");
+  }
+
+  function closeMonthlySummary() {
+    monthlyOverlay.classList.remove("active");
+  }
+
+  document.getElementById("btn-monthly-summary").addEventListener("click", openMonthlySummary);
+  document.getElementById("monthly-close").addEventListener("click", closeMonthlySummary);
+  monthlyOverlay.addEventListener("click", (e) => {
+    if (e.target === monthlyOverlay) closeMonthlySummary();
+  });
+
+  function isLastDayOfMonth(date) {
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    return date.getDate() === lastDay;
+  }
+
+  function maybeAutoShowMonthlySummary() {
+    const now = new Date();
+    if (!isLastDayOfMonth(now)) return;
+
+    const key = `easycontrol-monthly-popup-${now.getFullYear()}-${now.getMonth() + 1}`;
+    if (localStorage.getItem(key)) return;
+
+    localStorage.setItem(key, "1");
+    setTimeout(openMonthlySummary, 600);
+  }
+
   // ---------- Termin-Modal ----------
   const terminOverlay = document.getElementById("termin-overlay");
   const terminForm = document.getElementById("form-termin");
@@ -157,7 +233,7 @@
     terminRole = null;
   }
 
-  document.querySelectorAll(".fab-add").forEach(btn => {
+  document.querySelectorAll(".fab-add[data-role]").forEach(btn => {
     btn.addEventListener("click", () => {
       terminRole = btn.dataset.role;
       terminForm.reset();
@@ -187,6 +263,7 @@
 
   refreshCalendar("auftragnehmer");
   refreshCalendar("auftraggeber");
+  renderEmployeeList();
 
   document.getElementById("btn-login").addEventListener("click", () => showView("view-role"));
   document.getElementById("btn-register").addEventListener("click", () => showView("view-role"));
@@ -300,6 +377,7 @@
 
     resetNavAg();
     showView("view-app-ag");
+    maybeAutoShowMonthlySummary();
   }
 
   // Auftragnehmer form

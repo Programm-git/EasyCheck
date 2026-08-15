@@ -238,9 +238,14 @@
 
       <!-- Mitarbeiter Tab -->
       <div class="app-panel" id="panel-ag-mitarbeiter">
-        <div class="card">
-          <div class="panel-icon">👥</div>
-          <h2>Mitarbeiter</h2>
+        <div class="card card-wide">
+          <div class="panel-header">
+            <div>
+              <div class="panel-icon">👥</div>
+              <h2>Mitarbeiter</h2>
+            </div>
+            <button type="button" class="fab-add" id="btn-monthly-summary" aria-label="Monatsübersicht anzeigen">📊</button>
+          </div>
           <p class="subtitle">Behalte die Arbeitszeiten deiner Auftragnehmer im Überblick.</p>
 
           <div class="employee-list" id="ag-employee-list">
@@ -354,6 +359,21 @@
         <button type="submit" class="btn btn-primary">Speichern</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============ MONATSÜBERSICHT (Modal) ============ -->
+<div class="modal-overlay" id="monthly-overlay">
+  <div class="modal-box">
+    <div class="panel-icon">📊</div>
+    <h2>Monatsübersicht</h2>
+    <p class="subtitle" id="monthly-subtitle"></p>
+
+    <div class="employee-list" id="monthly-employee-list"></div>
+
+    <div class="btn-row">
+      <button type="button" class="btn btn-primary btn-block" id="monthly-close">Schließen</button>
+    </div>
   </div>
 </div>
 
