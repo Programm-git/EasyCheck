@@ -4,10 +4,15 @@
     "view-app-an": "bottom-nav-an",
     "view-app-ag": "bottom-nav-ag",
   };
+  const today = new Date();
   const state = {
     termine: { auftragnehmer: [], auftraggeber: [] },
     employees: [],
     postfach: { auftragnehmer: [], auftraggeber: [] },
+    calendarView: {
+      auftragnehmer: { year: today.getFullYear(), month: today.getMonth() },
+      auftraggeber: { year: today.getFullYear(), month: today.getMonth() },
+    },
   };
 
   function showView(id) {
@@ -64,15 +69,19 @@
 
   function renderCalendar(role, containerId) {
     const container = document.getElementById(containerId);
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    const view = state.calendarView[role];
+    const year = view.year;
+    const month = view.month;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const startWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
-    const todayKey = formatDateKey(now);
+    const todayKey = formatDateKey(today);
     const eventDates = new Set(state.termine[role].map(t => t.date));
 
-    let html = `<div class="calendar-header">${monthNames[month]} ${year}</div><div class="calendar-grid">`;
+    let html = `<div class="calendar-header">
+      <button type="button" class="calendar-nav" data-dir="-1" aria-label="Vorheriger Monat">‹</button>
+      <span>${monthNames[month]} ${year}</span>
+      <button type="button" class="calendar-nav" data-dir="1" aria-label="Nächster Monat">›</button>
+    </div><div class="calendar-grid">`;
     weekdayLabels.forEach(w => { html += `<div class="calendar-weekday">${w}</div>`; });
     for (let i = 0; i < startWeekday; i++) {
       html += `<div class="calendar-day"></div>`;
@@ -86,6 +95,19 @@
     }
     html += `</div>`;
     container.innerHTML = html;
+  }
+
+  function setupCalendarNav(role, containerId) {
+    const container = document.getElementById(containerId);
+    container.addEventListener("click", (e) => {
+      const btn = e.target.closest(".calendar-nav");
+      if (!btn) return;
+      const view = state.calendarView[role];
+      view.month += Number(btn.dataset.dir);
+      if (view.month < 0) { view.month = 11; view.year -= 1; }
+      if (view.month > 11) { view.month = 0; view.year += 1; }
+      renderCalendar(role, containerId);
+    });
   }
 
   function renderAppointments(role, containerId) {
@@ -355,6 +377,8 @@
     closeTerminModal();
   });
 
+  setupCalendarNav("auftragnehmer", "an-calendar");
+  setupCalendarNav("auftraggeber", "ag-calendar");
   refreshCalendar("auftragnehmer");
   refreshCalendar("auftraggeber");
   renderEmployeeList();
