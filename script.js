@@ -5,8 +5,26 @@
     "view-app-ag": "bottom-nav-ag",
   };
   const today = new Date();
+
+  const TERMINE_KEY = "easycheck-termine";
+  function loadTermine() {
+    try {
+      const raw = localStorage.getItem(TERMINE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.auftragnehmer) && Array.isArray(parsed.auftraggeber)) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return { auftragnehmer: [], auftraggeber: [] };
+  }
+  function saveTermine() {
+    try { localStorage.setItem(TERMINE_KEY, JSON.stringify(state.termine)); } catch (e) {}
+  }
+
   const state = {
-    termine: { auftragnehmer: [], auftraggeber: [] },
+    termine: loadTermine(),
     employees: [],
     postfach: { auftragnehmer: [], auftraggeber: [] },
     calendarView: {
@@ -307,6 +325,7 @@
         msg.status = "accepted";
         state.termine[role].push(msg.payload);
         state.termine[msg.fromRole].push(msg.payload);
+        saveTermine();
         refreshCalendar(role);
         refreshCalendar(msg.fromRole);
       } else {
