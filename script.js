@@ -180,14 +180,19 @@
 
     container.innerHTML = list.map(t => {
       const [y, m, d] = t.date.split("-").map(Number);
-      const pendingBadge = t.status === "pending" ? `<span class="appointment-pending">Angefragt</span>` : "";
+      let statusBadge = "";
+      if (t.status === "pending") {
+        statusBadge = `<span class="appointment-pending">Angefragt</span>`;
+      } else if (t.status === "confirmed") {
+        statusBadge = `<span class="appointment-confirmed">Bestätigt ✓</span>`;
+      }
       return `<div class="appointment-row">
         <div class="appointment-date"><div class="day">${d}</div><div class="month">${monthShort[m - 1]}</div></div>
         <div class="appointment-info">
           <div class="appointment-title">${escapeHtml(t.title)}</div>
           <div class="appointment-time">${escapeHtml(t.time)} Uhr</div>
         </div>
-        ${pendingBadge}
+        ${statusBadge}
       </div>`;
     }).join("");
   }

@@ -613,6 +613,16 @@ h2 {
   border-radius: 999px;
   padding: 4px 10px;
 }
+.appointment-confirmed {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--success);
+  background: rgba(46, 230, 166, 0.12);
+  border: 1px solid rgba(46, 230, 166, 0.3);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
 
 /* ---------- Termin modal ---------- */
 .modal-overlay {
