@@ -108,7 +108,10 @@
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const startWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
     const todayKey = formatDateKey(today);
-    const eventDates = new Set(state.termine[role].map(t => t.date));
+    const eventCounts = {};
+    state.termine[role].forEach(t => {
+      eventCounts[t.date] = (eventCounts[t.date] || 0) + 1;
+    });
 
     let html = `<div class="calendar-header">
       <button type="button" class="calendar-nav" data-dir="-1" aria-label="Vorheriger Monat">‹</button>
@@ -121,11 +124,15 @@
     }
     for (let d = 1; d <= daysInMonth; d++) {
       const dateKey = formatDateKey(new Date(year, month, d));
+      const count = eventCounts[dateKey] || 0;
       const classes = ["calendar-day", "in-month"];
       if (dateKey === todayKey) classes.push("today");
-      if (eventDates.has(dateKey)) classes.push("has-event");
+      if (count > 0) classes.push("has-event");
       if (dateKey === state.selectedDate[role]) classes.push("selected");
-      html += `<div class="${classes.join(" ")}" data-date="${dateKey}">${d}</div>`;
+      const dots = count > 0
+        ? `<div class="calendar-day-dots">${"<span></span>".repeat(Math.min(count, 4))}</div>`
+        : "";
+      html += `<div class="${classes.join(" ")}" data-date="${dateKey}">${d}${dots}</div>`;
     }
     html += `</div>`;
     container.innerHTML = html;
