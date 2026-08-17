@@ -516,11 +516,19 @@ h2 {
 .calendar-day.in-month {
   color: var(--text);
   background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.calendar-day.in-month:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 .calendar-day.today {
   background: var(--accent-grad);
   color: #fff;
   font-weight: 700;
+}
+.calendar-day.selected {
+  box-shadow: 0 0 0 2px var(--accent2);
 }
 .calendar-day.has-event::after {
   content: "";

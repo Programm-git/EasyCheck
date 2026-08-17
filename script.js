@@ -13,6 +13,7 @@
       auftragnehmer: { year: today.getFullYear(), month: today.getMonth() },
       auftraggeber: { year: today.getFullYear(), month: today.getMonth() },
     },
+    selectedDate: { auftragnehmer: null, auftraggeber: null },
   };
 
   function showView(id) {
@@ -91,7 +92,8 @@
       const classes = ["calendar-day", "in-month"];
       if (dateKey === todayKey) classes.push("today");
       if (eventDates.has(dateKey)) classes.push("has-event");
-      html += `<div class="${classes.join(" ")}">${d}</div>`;
+      if (dateKey === state.selectedDate[role]) classes.push("selected");
+      html += `<div class="${classes.join(" ")}" data-date="${dateKey}">${d}</div>`;
     }
     html += `</div>`;
     container.innerHTML = html;
@@ -110,12 +112,30 @@
     });
   }
 
+  function setupCalendarDayClick(role, calendarContainerId, appointmentsContainerId) {
+    const container = document.getElementById(calendarContainerId);
+    container.addEventListener("click", (e) => {
+      const day = e.target.closest(".calendar-day.in-month");
+      if (!day) return;
+      const date = day.dataset.date;
+      state.selectedDate[role] = (state.selectedDate[role] === date) ? null : date;
+      renderCalendar(role, calendarContainerId);
+      renderAppointments(role, appointmentsContainerId);
+    });
+  }
+
   function renderAppointments(role, containerId) {
     const container = document.getElementById(containerId);
-    const list = [...state.termine[role]].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    const selected = state.selectedDate[role];
+    let list = [...state.termine[role]];
+    if (selected) {
+      list = list.filter(t => t.date === selected);
+    }
+    list.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
     if (list.length === 0) {
-      container.innerHTML = `<div class="appointment-empty">Noch keine Termine eingetragen.</div>`;
+      const emptyText = selected ? "Keine Termine an diesem Tag." : "Noch keine Termine eingetragen.";
+      container.innerHTML = `<div class="appointment-empty">${emptyText}</div>`;
       return;
     }
 
@@ -379,6 +399,8 @@
 
   setupCalendarNav("auftragnehmer", "an-calendar");
   setupCalendarNav("auftraggeber", "ag-calendar");
+  setupCalendarDayClick("auftragnehmer", "an-calendar", "an-appointments");
+  setupCalendarDayClick("auftraggeber", "ag-calendar", "ag-appointments");
   refreshCalendar("auftragnehmer");
   refreshCalendar("auftraggeber");
   renderEmployeeList();
