@@ -15,6 +15,12 @@
     },
     selectedDate: { auftragnehmer: null, auftraggeber: null },
   };
+  let pendingRegistration = null;
+
+  function nameFromEmail(email) {
+    const local = email.split("@")[0] || email;
+    return local.charAt(0).toUpperCase() + local.slice(1);
+  }
 
   function showView(id) {
     views.forEach(v => v.classList.toggle("active", v.id === id));
@@ -409,9 +415,11 @@
   setupPostfachActions("auftragnehmer");
   setupPostfachActions("auftraggeber");
 
-  document.getElementById("btn-login").addEventListener("click", () => showView("view-role"));
+  document.getElementById("btn-login").addEventListener("click", () => {
+    pendingRegistration = null;
+    showView("view-role");
+  });
   document.getElementById("btn-register").addEventListener("click", () => showView("view-register"));
-  document.getElementById("btn-goto-login").addEventListener("click", () => showView("view-role"));
 
   document.getElementById("form-register").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -425,16 +433,38 @@
     }
     errorEl.textContent = "";
 
+    pendingRegistration = { email };
     document.getElementById("form-register").reset();
-    showView("view-register-success");
+    showView("view-role");
   });
 
   document.querySelectorAll("[data-back]").forEach(btn => {
     btn.addEventListener("click", () => showView(btn.dataset.back));
   });
 
-  document.getElementById("btn-role-auftragnehmer").addEventListener("click", () => showView("view-form-auftragnehmer"));
-  document.getElementById("btn-role-auftraggeber").addEventListener("click", () => showView("view-form-auftraggeber"));
+  document.getElementById("btn-role-auftragnehmer").addEventListener("click", () => {
+    if (pendingRegistration) {
+      const name = nameFromEmail(pendingRegistration.email);
+      goToAuftragnehmerDashboard(name,
+        `<div><b>E-Mail:</b> ${escapeHtml(pendingRegistration.email)}</div><div><b>Rolle:</b> Auftragnehmer</div>`
+      );
+      pendingRegistration = null;
+    } else {
+      showView("view-form-auftragnehmer");
+    }
+  });
+
+  document.getElementById("btn-role-auftraggeber").addEventListener("click", () => {
+    if (pendingRegistration) {
+      const name = nameFromEmail(pendingRegistration.email);
+      goToAuftraggeberDashboard(name,
+        `<div><b>E-Mail:</b> ${escapeHtml(pendingRegistration.email)}</div>`
+      );
+      pendingRegistration = null;
+    } else {
+      showView("view-form-auftraggeber");
+    }
+  });
 
   document.getElementById("btn-logout-an").addEventListener("click", () => showView("view-start"));
   document.getElementById("btn-logout-ag").addEventListener("click", () => showView("view-start"));
