@@ -173,12 +173,14 @@
 
     container.innerHTML = list.map(t => {
       const [y, m, d] = t.date.split("-").map(Number);
+      const pendingBadge = t.status === "pending" ? `<span class="appointment-pending">Angefragt</span>` : "";
       return `<div class="appointment-row">
         <div class="appointment-date"><div class="day">${d}</div><div class="month">${monthShort[m - 1]}</div></div>
         <div class="appointment-info">
           <div class="appointment-title">${escapeHtml(t.title)}</div>
           <div class="appointment-time">${escapeHtml(t.time)} Uhr</div>
         </div>
+        ${pendingBadge}
       </div>`;
     }).join("");
   }
@@ -294,8 +296,20 @@
     const [hh, mm] = payload.time.split(":");
     const timeLabel = mm === "00" ? `${Number(hh)} Uhr` : `${payload.time} Uhr`;
 
+    const requestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+    state.termine[fromRole].push({
+      id: requestId,
+      title: payload.title,
+      date: payload.date,
+      time: payload.time,
+      status: "pending",
+    });
+    saveTermine();
+    refreshCalendar(fromRole);
+
     state.postfach[toRole].unshift({
-      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: requestId,
       sender: senderName,
       text: `${payload.title} am ${dateLabel} um ${timeLabel}`,
       unread: true,
@@ -323,13 +337,26 @@
 
       if (acceptBtn) {
         msg.status = "accepted";
-        state.termine[role].push(msg.payload);
-        state.termine[msg.fromRole].push(msg.payload);
+
+        const senderEntry = state.termine[msg.fromRole].find(t => t.id === id);
+        if (senderEntry) senderEntry.status = "confirmed";
+
+        state.termine[role].push({
+          id,
+          title: msg.payload.title,
+          date: msg.payload.date,
+          time: msg.payload.time,
+          status: "confirmed",
+        });
+
         saveTermine();
         refreshCalendar(role);
         refreshCalendar(msg.fromRole);
       } else {
         msg.status = "declined";
+        state.termine[msg.fromRole] = state.termine[msg.fromRole].filter(t => t.id !== id);
+        saveTermine();
+        refreshCalendar(msg.fromRole);
       }
 
       msg.unread = false;
