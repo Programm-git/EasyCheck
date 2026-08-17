@@ -57,6 +57,40 @@
     </div>
   </section>
 
+  <!-- ============ REGISTRIEREN (nur E-Mail + Passwort) ============ -->
+  <section id="view-register" class="view">
+    <div class="card">
+      <button class="btn-back" data-back="view-start">&larr; Zurück</button>
+      <h2>Registrieren</h2>
+      <p class="subtitle">Erstelle dein Konto mit E-Mail und Passwort.</p>
+
+      <form id="form-register" novalidate>
+        <div class="field">
+          <label for="reg-email">E-Mail-Adresse</label>
+          <input type="email" id="reg-email" required placeholder="max@beispiel.de">
+        </div>
+        <div class="field">
+          <label for="reg-password">Passwort</label>
+          <input type="password" id="reg-password" required minlength="6" placeholder="Mindestens 6 Zeichen">
+        </div>
+
+        <div class="error-msg" id="reg-error"></div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="reg-submit">Registrieren</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ REGISTRIERUNG ERFOLGREICH ============ -->
+  <section id="view-register-success" class="view">
+    <div class="card welcome-card">
+      <div class="success-icon">✓</div>
+      <h2>Konto erstellt!</h2>
+      <p class="subtitle">Dein Konto wurde erfolgreich angelegt. Melde dich jetzt an, um dein Profil einzurichten.</p>
+      <button class="btn btn-primary btn-block" id="btn-goto-login">Jetzt anmelden</button>
+    </div>
+  </section>
+
   <!-- ============ FORM: AUFTRAGNEHMER ============ -->
   <section id="view-form-auftragnehmer" class="view">
     <div class="card">

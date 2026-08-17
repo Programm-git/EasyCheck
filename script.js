@@ -388,7 +388,24 @@
   setupPostfachActions("auftraggeber");
 
   document.getElementById("btn-login").addEventListener("click", () => showView("view-role"));
-  document.getElementById("btn-register").addEventListener("click", () => showView("view-role"));
+  document.getElementById("btn-register").addEventListener("click", () => showView("view-register"));
+  document.getElementById("btn-goto-login").addEventListener("click", () => showView("view-role"));
+
+  document.getElementById("form-register").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = document.getElementById("reg-email").value.trim();
+    const password = document.getElementById("reg-password").value;
+    const errorEl = document.getElementById("reg-error");
+
+    if (!email || !password) {
+      errorEl.textContent = "Bitte fülle alle Felder aus.";
+      return;
+    }
+    errorEl.textContent = "";
+
+    document.getElementById("form-register").reset();
+    showView("view-register-success");
+  });
 
   document.querySelectorAll("[data-back]").forEach(btn => {
     btn.addEventListener("click", () => showView(btn.dataset.back));
