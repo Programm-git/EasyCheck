@@ -22,6 +22,14 @@
     return local.charAt(0).toUpperCase() + local.slice(1);
   }
 
+  const LAST_ROLE_KEY = "easycheck-last-role";
+  function saveLastRole(role) {
+    try { localStorage.setItem(LAST_ROLE_KEY, role); } catch (e) {}
+  }
+  function getLastRole() {
+    try { return localStorage.getItem(LAST_ROLE_KEY); } catch (e) { return null; }
+  }
+
   function showView(id) {
     views.forEach(v => v.classList.toggle("active", v.id === id));
 
@@ -433,9 +441,21 @@
     }
     errorEl.textContent = "";
 
-    pendingRegistration = { email };
     document.getElementById("form-register").reset();
-    showView("view-role");
+
+    const lastRole = getLastRole();
+    if (lastRole === "auftragnehmer") {
+      goToAuftragnehmerDashboard(nameFromEmail(email),
+        `<div><b>E-Mail:</b> ${escapeHtml(email)}</div><div><b>Rolle:</b> Auftragnehmer</div>`
+      );
+    } else if (lastRole === "auftraggeber") {
+      goToAuftraggeberDashboard(nameFromEmail(email),
+        `<div><b>E-Mail:</b> ${escapeHtml(email)}</div>`
+      );
+    } else {
+      pendingRegistration = { email };
+      showView("view-role");
+    }
   });
 
   document.querySelectorAll("[data-back]").forEach(btn => {
@@ -495,6 +515,7 @@
   const resetNavAg = setupBottomNav("bottom-nav-ag", "view-app-ag");
 
   function goToAuftragnehmerDashboard(name, extra) {
+    saveLastRole("auftragnehmer");
     document.getElementById("an-welcome-name").textContent = name;
     document.getElementById("an-welcome-text").textContent =
       "Dein Profil wurde erstellt. Du kannst deine Arbeitszeit jetzt ganz einfach erfassen und im Überblick behalten.";
@@ -508,6 +529,7 @@
   }
 
   function goToAuftraggeberDashboard(name, extra) {
+    saveLastRole("auftraggeber");
     document.getElementById("ag-welcome-name").textContent = name;
     document.getElementById("ag-welcome-text").textContent =
       "Dein Profil wurde erstellt. Hier ist der Überblick über deine Mitarbeiter.";
