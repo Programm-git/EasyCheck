@@ -429,6 +429,22 @@
     if (e.target === workStartOverlay) workStartOverlay.classList.remove("active");
   });
 
+  function workerName() {
+    const el = document.getElementById("an-welcome-name");
+    return (el && el.textContent.trim()) || "Ein Auftragnehmer";
+  }
+
+  function sendWorkNotification(text) {
+    state.postfach.auftraggeber.unshift({
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      sender: workerName(),
+      text,
+      unread: true,
+      type: "info",
+    });
+    renderPostfach("auftraggeber");
+  }
+
   formWorkStart.addEventListener("submit", (e) => {
     e.preventDefault();
     if (state.connectedEmployers.length === 0) return;
@@ -447,6 +463,8 @@
     saveWorkSession();
     updateWorkButtons();
     workStartOverlay.classList.remove("active");
+
+    sendWorkNotification(`${workerName()} hat die Arbeitszeit gestartet (Auftraggeber ${escapeHtml(employerCode)}).`);
   });
 
   btnWorkStop.addEventListener("click", () => {
@@ -472,10 +490,14 @@
     updateWorkButtons();
     renderAnStats();
 
-    document.getElementById("work-result-time").textContent = formatDuration(endTime - session.startTime);
-    document.getElementById("work-result-money").textContent =
-      earnings.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+    const durationLabel = formatDuration(endTime - session.startTime);
+    const earningsLabel = earnings.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+
+    document.getElementById("work-result-time").textContent = durationLabel;
+    document.getElementById("work-result-money").textContent = earningsLabel;
     workResultOverlay.classList.add("active");
+
+    sendWorkNotification(`${workerName()} hat die Arbeitszeit beendet: ${durationLabel} gearbeitet, ${earningsLabel} verdient.`);
   });
 
   document.getElementById("work-result-close").addEventListener("click", () => {
