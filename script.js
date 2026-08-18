@@ -38,10 +38,45 @@
     try { localStorage.setItem(EMPLOYERS_KEY, JSON.stringify(state.connectedEmployers)); } catch (e) {}
   }
 
+  const WORK_HISTORY_KEY = "easycheck-work-history";
+  function loadWorkHistory() {
+    try {
+      const raw = localStorage.getItem(WORK_HISTORY_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  }
+  function saveWorkHistory() {
+    try { localStorage.setItem(WORK_HISTORY_KEY, JSON.stringify(state.workHistory)); } catch (e) {}
+  }
+
+  const WORK_SESSION_KEY = "easycheck-work-session";
+  function loadWorkSession() {
+    try {
+      const raw = localStorage.getItem(WORK_SESSION_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  }
+  function saveWorkSession() {
+    try {
+      if (state.workSession) {
+        localStorage.setItem(WORK_SESSION_KEY, JSON.stringify(state.workSession));
+      } else {
+        localStorage.removeItem(WORK_SESSION_KEY);
+      }
+    } catch (e) {}
+  }
+
   const state = {
     termine: loadTermine(),
     employees: [],
     connectedEmployers: loadConnectedEmployers(),
+    workHistory: loadWorkHistory(),
+    workSession: loadWorkSession(),
     postfach: { auftragnehmer: [], auftraggeber: [] },
     calendarView: {
       auftragnehmer: { year: today.getFullYear(), month: today.getMonth() },
@@ -313,7 +348,141 @@
     state.connectedEmployers.push({ code, connectedAt: new Date().toISOString() });
     saveConnectedEmployers();
     renderConnectedEmployers();
+    renderAnStats();
     connectForm.reset();
+  });
+
+  // ---------- Auftragnehmer Home-Statistik ----------
+  function renderAnStats() {
+    const employerEl = document.getElementById("an-stat-employers");
+    const hoursEl = document.getElementById("an-stat-hours");
+    if (!employerEl || !hoursEl) return;
+
+    employerEl.textContent = state.connectedEmployers.length;
+
+    const now = new Date();
+    const monthHours = state.workHistory
+      .filter(s => {
+        const d = new Date(s.startTime);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      })
+      .reduce((sum, s) => sum + s.hours, 0);
+    hoursEl.textContent = monthHours.toLocaleString("de-DE", { maximumFractionDigits: 1 });
+  }
+
+  // ---------- Arbeitszeit Start/Stop ----------
+  const btnWorkStart = document.getElementById("btn-work-start");
+  const btnWorkStop = document.getElementById("btn-work-stop");
+  const workStartOverlay = document.getElementById("work-start-overlay");
+  const workEmployerSelect = document.getElementById("work-employer");
+  const workRateInput = document.getElementById("work-rate");
+  const workPersonsInput = document.getElementById("work-persons");
+  const workStartError = document.getElementById("work-start-error");
+  const formWorkStart = document.getElementById("form-work-start");
+  const workResultOverlay = document.getElementById("work-result-overlay");
+  let workTickInterval = null;
+
+  function formatDuration(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const h = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+    const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+    const s = String(totalSeconds % 60).padStart(2, "0");
+    return `${h}:${m}:${s}`;
+  }
+
+  function updateWorkButtons() {
+    const active = !!state.workSession;
+    btnWorkStart.classList.toggle("hidden", active);
+    btnWorkStop.classList.toggle("hidden", !active);
+
+    if (active && !workTickInterval) {
+      const tick = () => {
+        btnWorkStop.textContent = `■ Stop (${formatDuration(Date.now() - state.workSession.startTime)})`;
+      };
+      tick();
+      workTickInterval = setInterval(tick, 1000);
+    } else if (!active && workTickInterval) {
+      clearInterval(workTickInterval);
+      workTickInterval = null;
+      btnWorkStop.textContent = "■ Stop";
+    }
+  }
+
+  btnWorkStart.addEventListener("click", () => {
+    if (state.connectedEmployers.length === 0) {
+      workStartError.textContent = "Bitte verbinde dich unter Account zuerst mit einem Auftraggeber.";
+      workEmployerSelect.innerHTML = "";
+    } else {
+      workStartError.textContent = "";
+      workEmployerSelect.innerHTML = state.connectedEmployers
+        .map(emp => `<option value="${escapeHtml(emp.code)}">Auftraggeber ${escapeHtml(emp.code)}</option>`)
+        .join("");
+    }
+    formWorkStart.reset();
+    workStartOverlay.classList.add("active");
+  });
+
+  document.getElementById("work-start-cancel").addEventListener("click", () => {
+    workStartOverlay.classList.remove("active");
+  });
+  workStartOverlay.addEventListener("click", (e) => {
+    if (e.target === workStartOverlay) workStartOverlay.classList.remove("active");
+  });
+
+  formWorkStart.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (state.connectedEmployers.length === 0) return;
+
+    const employerCode = workEmployerSelect.value;
+    const rate = parseFloat(workRateInput.value);
+    const persons = parseInt(workPersonsInput.value, 10);
+
+    if (!employerCode || !(rate > 0) || !(persons > 0)) {
+      workStartError.textContent = "Bitte fülle alle Felder korrekt aus.";
+      return;
+    }
+    workStartError.textContent = "";
+
+    state.workSession = { employerCode, rate, persons, startTime: Date.now() };
+    saveWorkSession();
+    updateWorkButtons();
+    workStartOverlay.classList.remove("active");
+  });
+
+  btnWorkStop.addEventListener("click", () => {
+    if (!state.workSession) return;
+    const session = state.workSession;
+    const endTime = Date.now();
+    const hours = (endTime - session.startTime) / 3600000;
+    const earnings = hours * session.rate * session.persons;
+
+    state.workHistory.push({
+      employerCode: session.employerCode,
+      rate: session.rate,
+      persons: session.persons,
+      startTime: session.startTime,
+      endTime,
+      hours,
+      earnings,
+    });
+    saveWorkHistory();
+
+    state.workSession = null;
+    saveWorkSession();
+    updateWorkButtons();
+    renderAnStats();
+
+    document.getElementById("work-result-time").textContent = formatDuration(endTime - session.startTime);
+    document.getElementById("work-result-money").textContent =
+      earnings.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+    workResultOverlay.classList.add("active");
+  });
+
+  document.getElementById("work-result-close").addEventListener("click", () => {
+    workResultOverlay.classList.remove("active");
+  });
+  workResultOverlay.addEventListener("click", (e) => {
+    if (e.target === workResultOverlay) workResultOverlay.classList.remove("active");
   });
 
   // ---------- Postfach ----------
@@ -538,6 +707,8 @@
   refreshCalendar("auftraggeber");
   renderEmployeeList();
   renderConnectedEmployers();
+  renderAnStats();
+  updateWorkButtons();
   renderPostfach("auftragnehmer");
   renderPostfach("auftraggeber");
   setupPostfachActions("auftragnehmer");
@@ -566,7 +737,7 @@
     const lastRole = getLastRole();
     if (lastRole === "auftragnehmer") {
       goToAuftragnehmerDashboard(nameFromEmail(email),
-        `<div><b>E-Mail:</b> ${escapeHtml(email)}</div><div><b>Rolle:</b> Auftragnehmer</div>`
+        `<div><b>E-Mail:</b> ${escapeHtml(email)}</div>`
       );
     } else if (lastRole === "auftraggeber") {
       goToAuftraggeberDashboard(nameFromEmail(email),
@@ -586,7 +757,7 @@
     if (pendingRegistration) {
       const name = nameFromEmail(pendingRegistration.email);
       goToAuftragnehmerDashboard(name,
-        `<div><b>E-Mail:</b> ${escapeHtml(pendingRegistration.email)}</div><div><b>Rolle:</b> Auftragnehmer</div>`
+        `<div><b>E-Mail:</b> ${escapeHtml(pendingRegistration.email)}</div>`
       );
       pendingRegistration = null;
     } else {
@@ -684,7 +855,7 @@
     }
 
     goToAuftragnehmerDashboard(name,
-      `<div><b>E-Mail:</b> ${email}</div><div><b>Rolle:</b> Auftragnehmer</div>`
+      `<div><b>E-Mail:</b> ${email}</div>`
     );
   });
 

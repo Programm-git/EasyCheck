@@ -238,6 +238,67 @@ h2 {
   margin-top: 6px;
 }
 
+.hidden {
+  display: none !important;
+}
+
+.btn-work-start,
+.btn-work-stop {
+  width: 100%;
+  margin-top: 20px;
+  padding: 16px 22px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-work-start {
+  background: linear-gradient(135deg, #2ee6a6 0%, #1fb787 100%);
+  box-shadow: 0 10px 26px rgba(46, 230, 166, 0.35);
+}
+.btn-work-start:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(46, 230, 166, 0.45);
+}
+.btn-work-stop {
+  background: linear-gradient(135deg, #ff6b6b 0%, #e14d4d 100%);
+  box-shadow: 0 10px 26px rgba(255, 107, 107, 0.35);
+}
+.btn-work-stop:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(255, 107, 107, 0.45);
+}
+
+.work-result-row {
+  display: flex;
+  gap: 14px;
+  margin: 22px 0 6px;
+}
+.work-result-tile {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+}
+.work-result-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  background: var(--accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.work-result-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
 .btn-row {
   display: flex;
   gap: 14px;
@@ -306,7 +367,9 @@ h2 {
 .field input[type="email"],
 .field input[type="password"],
 .field input[type="date"],
-.field input[type="time"] {
+.field input[type="time"],
+.field input[type="number"],
+.field select {
   width: 100%;
   padding: 12px 14px;
   border-radius: 10px;
@@ -318,7 +381,12 @@ h2 {
   transition: border-color 0.15s ease, background 0.15s ease;
   color-scheme: dark;
 }
-.field input:focus {
+.field select option {
+  background: #171429;
+  color: var(--text);
+}
+.field input:focus,
+.field select:focus {
   outline: none;
   border-color: var(--accent);
   background: rgba(255, 255, 255, 0.08);
