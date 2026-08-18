@@ -781,6 +781,32 @@ body.show-nav .footer {
 .invite-code-row .btn-secondary {
   flex-shrink: 0;
 }
+.connect-code-input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--surface-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-family: inherit;
+}
+.connect-code-input::placeholder {
+  letter-spacing: normal;
+  text-transform: none;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+.connect-code-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+}
 
 /* ---------- Postfach (Account) ---------- */
 .postfach-box {

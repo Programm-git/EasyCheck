@@ -176,6 +176,19 @@
         </div>
       </div>
 
+      <!-- Auftraggeber Tab -->
+      <div class="app-panel" id="panel-an-auftraggeber">
+        <div class="card">
+          <div class="panel-icon">📋</div>
+          <h2>Auftraggeber</h2>
+          <p class="subtitle">Alle Auftraggeber, mit denen du verbunden bist.</p>
+
+          <div class="employee-list" id="an-employer-list">
+            <div class="appointment-empty">Noch keine Auftraggeber verbunden. Gib unter Account den Code deines Auftraggebers ein.</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Kalender Tab -->
       <div class="app-panel" id="panel-an-kalender">
         <div class="card card-wide">
@@ -200,6 +213,16 @@
           <div class="panel-icon">👤</div>
           <h2>Account</h2>
           <div class="summary-box" id="an-account-summary"></div>
+
+          <div class="invite-box">
+            <div class="invite-title">Mit Auftraggeber verbinden</div>
+            <p class="invite-desc">Gib den Code deines Auftraggebers ein, um dich zu verbinden.</p>
+            <form id="form-connect-employer" class="invite-code-row" novalidate>
+              <input type="text" id="connect-code" class="connect-code-input" placeholder="z. B. 7DAWYG" autocomplete="off" required>
+              <button type="submit" class="btn btn-secondary">Verbinden</button>
+            </form>
+            <div class="error-msg" id="connect-error"></div>
+          </div>
 
           <div class="postfach-box">
             <div class="postfach-title">📬 Postfach</div>
@@ -314,6 +337,10 @@
   <button class="nav-btn active" data-panel="panel-an-home">
     <span class="nav-icon">🏠</span>
     <span class="nav-label">Home</span>
+  </button>
+  <button class="nav-btn" data-panel="panel-an-auftraggeber">
+    <span class="nav-icon">📋</span>
+    <span class="nav-label">Auftraggeber</span>
   </button>
   <button class="nav-btn" data-panel="panel-an-kalender">
     <span class="nav-icon">📅</span>

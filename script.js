@@ -23,9 +23,25 @@
     try { localStorage.setItem(TERMINE_KEY, JSON.stringify(state.termine)); } catch (e) {}
   }
 
+  const EMPLOYERS_KEY = "easycheck-connected-employers";
+  function loadConnectedEmployers() {
+    try {
+      const raw = localStorage.getItem(EMPLOYERS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  }
+  function saveConnectedEmployers() {
+    try { localStorage.setItem(EMPLOYERS_KEY, JSON.stringify(state.connectedEmployers)); } catch (e) {}
+  }
+
   const state = {
     termine: loadTermine(),
     employees: [],
+    connectedEmployers: loadConnectedEmployers(),
     postfach: { auftragnehmer: [], auftraggeber: [] },
     calendarView: {
       auftragnehmer: { year: today.getFullYear(), month: today.getMonth() },
@@ -255,6 +271,51 @@
     `).join("");
   }
 
+  // ---------- Verbundene Auftraggeber (Auftragnehmer) ----------
+  function renderConnectedEmployers() {
+    const container = document.getElementById("an-employer-list");
+    if (!container) return;
+
+    if (state.connectedEmployers.length === 0) {
+      container.innerHTML = `<div class="appointment-empty">Noch keine Auftraggeber verbunden. Gib unter Account den Code deines Auftraggebers ein.</div>`;
+      return;
+    }
+
+    container.innerHTML = state.connectedEmployers.map(emp => `
+      <div class="employee-row">
+        <div class="employee-avatar">${escapeHtml(emp.code.slice(0, 2))}</div>
+        <div class="employee-info">
+          <div class="employee-name">Auftraggeber ${escapeHtml(emp.code)}</div>
+          <div class="employee-meta">Verbunden</div>
+        </div>
+        <span class="employee-status status-active">Aktiv</span>
+      </div>
+    `).join("");
+  }
+
+  const connectForm = document.getElementById("form-connect-employer");
+  const connectCodeInput = document.getElementById("connect-code");
+  const connectErrorEl = document.getElementById("connect-error");
+  connectForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const code = connectCodeInput.value.trim().toUpperCase();
+
+    if (!code) {
+      connectErrorEl.textContent = "Bitte gib einen Code ein.";
+      return;
+    }
+    if (state.connectedEmployers.some(emp => emp.code === code)) {
+      connectErrorEl.textContent = "Mit diesem Code bist du bereits verbunden.";
+      return;
+    }
+
+    connectErrorEl.textContent = "";
+    state.connectedEmployers.push({ code, connectedAt: new Date().toISOString() });
+    saveConnectedEmployers();
+    renderConnectedEmployers();
+    connectForm.reset();
+  });
+
   // ---------- Postfach ----------
   const postfachContainerId = { auftragnehmer: "an-postfach", auftraggeber: "ag-postfach" };
 
@@ -476,6 +537,7 @@
   refreshCalendar("auftragnehmer");
   refreshCalendar("auftraggeber");
   renderEmployeeList();
+  renderConnectedEmployers();
   renderPostfach("auftragnehmer");
   renderPostfach("auftraggeber");
   setupPostfachActions("auftragnehmer");
