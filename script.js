@@ -94,6 +94,22 @@
     try { localStorage.setItem(NAME_KEYS[role], name); } catch (e) {}
   }
 
+  const EMAIL_KEYS = { auftragnehmer: "easycheck-email-auftragnehmer", auftraggeber: "easycheck-email-auftraggeber" };
+  function loadEmail(role) {
+    try { return localStorage.getItem(EMAIL_KEYS[role]); } catch (e) { return null; }
+  }
+  function saveEmail(role, email) {
+    try { localStorage.setItem(EMAIL_KEYS[role], email); } catch (e) {}
+  }
+
+  const ADDRESS_KEY = "easycheck-address-auftraggeber";
+  function loadAddress() {
+    try { return localStorage.getItem(ADDRESS_KEY); } catch (e) { return null; }
+  }
+  function saveAddress(address) {
+    try { localStorage.setItem(ADDRESS_KEY, address); } catch (e) {}
+  }
+
   const INVITE_CODE_KEY = "easycheck-invite-code";
   function getOrCreateInviteCode() {
     try {
@@ -876,13 +892,9 @@
 
     const lastRole = getLastRole();
     if (lastRole === "auftragnehmer") {
-      goToAuftragnehmerDashboard(nameFromEmail(email),
-        `<div><b>E-Mail:</b> ${escapeHtml(email)}</div>`
-      );
+      goToAuftragnehmerDashboard(nameFromEmail(email), email);
     } else if (lastRole === "auftraggeber") {
-      goToAuftraggeberDashboard(nameFromEmail(email),
-        `<div><b>E-Mail:</b> ${escapeHtml(email)}</div>`
-      );
+      goToAuftraggeberDashboard(nameFromEmail(email), email);
     } else {
       pendingRegistration = { email };
       showView("view-role");
@@ -895,11 +907,15 @@
 
   document.getElementById("btn-role-auftragnehmer").addEventListener("click", () => {
     if (pendingRegistration) {
-      const name = nameFromEmail(pendingRegistration.email);
-      goToAuftragnehmerDashboard(name,
-        `<div><b>E-Mail:</b> ${escapeHtml(pendingRegistration.email)}</div>`
-      );
+      goToAuftragnehmerDashboard(nameFromEmail(pendingRegistration.email), pendingRegistration.email);
       pendingRegistration = null;
+      return;
+    }
+
+    const storedName = loadName("auftragnehmer");
+    const storedEmail = loadEmail("auftragnehmer");
+    if (storedName && storedEmail) {
+      goToAuftragnehmerDashboard(storedName, storedEmail);
     } else {
       showView("view-form-auftragnehmer");
     }
@@ -907,11 +923,15 @@
 
   document.getElementById("btn-role-auftraggeber").addEventListener("click", () => {
     if (pendingRegistration) {
-      const name = nameFromEmail(pendingRegistration.email);
-      goToAuftraggeberDashboard(name,
-        `<div><b>E-Mail:</b> ${escapeHtml(pendingRegistration.email)}</div>`
-      );
+      goToAuftraggeberDashboard(nameFromEmail(pendingRegistration.email), pendingRegistration.email);
       pendingRegistration = null;
+      return;
+    }
+
+    const storedName = loadName("auftraggeber");
+    const storedEmail = loadEmail("auftraggeber");
+    if (storedName && storedEmail) {
+      goToAuftraggeberDashboard(storedName, storedEmail, loadAddress());
     } else {
       showView("view-form-auftraggeber");
     }
@@ -945,11 +965,17 @@
   const resetNavAn = setupBottomNav("bottom-nav-an", "view-app-an");
   const resetNavAg = setupBottomNav("bottom-nav-ag", "view-app-ag");
 
-  function goToAuftragnehmerDashboard(name, extra) {
+  function goToAuftragnehmerDashboard(name, email) {
     saveLastRole("auftragnehmer");
     const storedName = loadName("auftragnehmer");
     const finalName = storedName || name;
     if (!storedName) saveName("auftragnehmer", finalName);
+
+    const storedEmail = loadEmail("auftragnehmer");
+    const finalEmail = storedEmail || email;
+    if (!storedEmail) saveEmail("auftragnehmer", finalEmail);
+
+    const extra = `<div><b>E-Mail:</b> ${escapeHtml(finalEmail)}</div>`;
 
     document.getElementById("an-welcome-name").textContent = finalName;
     document.getElementById("an-welcome-text").textContent =
@@ -964,11 +990,22 @@
     showView("view-app-an");
   }
 
-  function goToAuftraggeberDashboard(name, extra) {
+  function goToAuftraggeberDashboard(name, email, address) {
     saveLastRole("auftraggeber");
     const storedName = loadName("auftraggeber");
     const finalName = storedName || name;
     if (!storedName) saveName("auftraggeber", finalName);
+
+    const storedEmail = loadEmail("auftraggeber");
+    const finalEmail = storedEmail || email;
+    if (!storedEmail) saveEmail("auftraggeber", finalEmail);
+
+    const storedAddress = loadAddress();
+    const finalAddress = storedAddress || address || "";
+    if (!storedAddress && address) saveAddress(address);
+
+    const extra = `<div><b>E-Mail:</b> ${escapeHtml(finalEmail)}</div>` +
+      (finalAddress ? `<div><b>Adresse:</b> ${escapeHtml(finalAddress)}</div>` : "");
 
     document.getElementById("ag-welcome-name").textContent = finalName;
     document.getElementById("ag-welcome-text").textContent =
@@ -1006,9 +1043,7 @@
       Notification.requestPermission().catch(() => {});
     }
 
-    goToAuftragnehmerDashboard(name,
-      `<div><b>E-Mail:</b> ${email}</div>`
-    );
+    goToAuftragnehmerDashboard(name, email);
   });
 
   // Auftraggeber form
@@ -1031,8 +1066,6 @@
       Notification.requestPermission().catch(() => {});
     }
 
-    goToAuftraggeberDashboard(name,
-      `<div><b>E-Mail:</b> ${email}</div><div><b>Adresse:</b> ${address}, ${zip}</div>`
-    );
+    goToAuftraggeberDashboard(name, email, `${address}, ${zip}`);
   });
 })();
