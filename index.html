@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EasyCheck – Einfach. Sicher. Checken.</title>
-<link rel="stylesheet" href="style.css?v=34">
+<link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 
@@ -77,6 +77,30 @@
         <div class="error-msg" id="reg-error"></div>
 
         <button type="submit" class="btn btn-primary btn-block" id="reg-submit">Registrieren</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ ANMELDEN (E-Mail + Passwort) ============ -->
+  <section id="view-login" class="view">
+    <div class="card">
+      <button class="btn-back" data-back="view-role">&larr; Zurück</button>
+      <h2>Anmelden</h2>
+      <p class="subtitle">Gib deine E-Mail-Adresse und dein Passwort ein.</p>
+
+      <form id="form-login" novalidate>
+        <div class="field">
+          <label for="login-email">E-Mail-Adresse</label>
+          <input type="email" id="login-email" required placeholder="max@beispiel.de">
+        </div>
+        <div class="field">
+          <label for="login-password">Passwort</label>
+          <input type="password" id="login-password" required minlength="6" placeholder="Mindestens 6 Zeichen">
+        </div>
+
+        <div class="error-msg" id="login-error"></div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="login-submit">Anmelden</button>
       </form>
     </div>
   </section>
@@ -239,6 +263,17 @@
             <div class="error-msg" id="connect-error"></div>
           </div>
 
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-title">Auto-Accept</div>
+              <p class="toggle-desc">Alle eingehenden Anfragen im Postfach automatisch annehmen.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="an-auto-accept-toggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
           <div class="postfach-box">
             <div class="postfach-title">📬 Postfach</div>
             <div class="message-list" id="an-postfach"></div>
@@ -332,6 +367,17 @@
               <span class="invite-code" id="ag-invite-code">------</span>
               <button type="button" class="btn btn-secondary" id="ag-invite-copy">Kopieren</button>
             </div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-title">Auto-Accept</div>
+              <p class="toggle-desc">Alle eingehenden Anfragen im Postfach automatisch annehmen.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="ag-auto-accept-toggle">
+              <span class="toggle-slider"></span>
+            </label>
           </div>
 
           <div class="postfach-box">
@@ -502,6 +548,6 @@
   </div>
 </div>
 
-<script src="script.js?v=35"></script>
+<script src="script.js?v=36"></script>
 </body>
 </html>

@@ -124,12 +124,28 @@
     }
   }
 
+  const AUTO_ACCEPT_KEY = "easycheck-auto-accept";
+  function loadAutoAccept() {
+    try {
+      const raw = localStorage.getItem(AUTO_ACCEPT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e) {}
+    return { auftragnehmer: false, auftraggeber: false };
+  }
+  function saveAutoAccept() {
+    try { localStorage.setItem(AUTO_ACCEPT_KEY, JSON.stringify(state.autoAccept)); } catch (e) {}
+  }
+
   const state = {
     termine: loadTermine(),
     employees: loadEmployees(),
     connectedEmployers: loadConnectedEmployers(),
     workHistory: loadWorkHistory(),
     workSession: loadWorkSession(),
+    autoAccept: loadAutoAccept(),
     postfach: { auftragnehmer: [], auftraggeber: [] },
     calendarView: {
       auftragnehmer: { year: today.getFullYear(), month: today.getMonth() },
@@ -646,7 +662,39 @@
       status: "pending",
     });
 
+    if (state.autoAccept[toRole]) {
+      acceptTerminMessage(toRole, state.postfach[toRole][0]);
+    }
+
     renderPostfach(toRole);
+  }
+
+  function acceptTerminMessage(role, msg) {
+    msg.status = "accepted";
+    msg.unread = false;
+
+    const senderEntry = state.termine[msg.fromRole].find(t => t.id === msg.id);
+    if (senderEntry) senderEntry.status = "confirmed";
+
+    state.termine[role].push({
+      id: msg.id,
+      title: msg.payload.title,
+      date: msg.payload.date,
+      time: msg.payload.time,
+      status: "confirmed",
+    });
+
+    saveTermine();
+    refreshCalendar(role);
+    refreshCalendar(msg.fromRole);
+  }
+
+  function declineTerminMessage(role, msg) {
+    msg.status = "declined";
+    msg.unread = false;
+    state.termine[msg.fromRole] = state.termine[msg.fromRole].filter(t => t.id !== msg.id);
+    saveTermine();
+    refreshCalendar(msg.fromRole);
   }
 
   function setupPostfachActions(role) {
@@ -663,30 +711,11 @@
       if (!msg) return;
 
       if (acceptBtn) {
-        msg.status = "accepted";
-
-        const senderEntry = state.termine[msg.fromRole].find(t => t.id === id);
-        if (senderEntry) senderEntry.status = "confirmed";
-
-        state.termine[role].push({
-          id,
-          title: msg.payload.title,
-          date: msg.payload.date,
-          time: msg.payload.time,
-          status: "confirmed",
-        });
-
-        saveTermine();
-        refreshCalendar(role);
-        refreshCalendar(msg.fromRole);
+        acceptTerminMessage(role, msg);
       } else {
-        msg.status = "declined";
-        state.termine[msg.fromRole] = state.termine[msg.fromRole].filter(t => t.id !== id);
-        saveTermine();
-        refreshCalendar(msg.fromRole);
+        declineTerminMessage(role, msg);
       }
 
-      msg.unread = false;
       renderPostfach(role);
     });
   }
@@ -823,6 +852,18 @@
   setupPostfachActions("auftragnehmer");
   setupPostfachActions("auftraggeber");
 
+  function setupAutoAcceptToggle(role, toggleId) {
+    const toggle = document.getElementById(toggleId);
+    if (!toggle) return;
+    toggle.checked = !!state.autoAccept[role];
+    toggle.addEventListener("change", () => {
+      state.autoAccept[role] = toggle.checked;
+      saveAutoAccept();
+    });
+  }
+  setupAutoAcceptToggle("auftragnehmer", "an-auto-accept-toggle");
+  setupAutoAcceptToggle("auftraggeber", "ag-auto-accept-toggle");
+
   // ---------- Name bearbeiten ----------
   const editNameOverlay = document.getElementById("edit-name-overlay");
   const editNameForm = document.getElementById("form-edit-name");
@@ -905,6 +946,8 @@
     btn.addEventListener("click", () => showView(btn.dataset.back));
   });
 
+  let pendingLoginRole = null;
+
   document.getElementById("btn-role-auftragnehmer").addEventListener("click", () => {
     if (pendingRegistration) {
       goToAuftragnehmerDashboard(nameFromEmail(pendingRegistration.email), pendingRegistration.email);
@@ -912,13 +955,10 @@
       return;
     }
 
-    const storedName = loadName("auftragnehmer");
-    const storedEmail = loadEmail("auftragnehmer");
-    if (storedName && storedEmail) {
-      goToAuftragnehmerDashboard(storedName, storedEmail);
-    } else {
-      showView("view-form-auftragnehmer");
-    }
+    pendingLoginRole = "auftragnehmer";
+    document.getElementById("login-error").textContent = "";
+    document.getElementById("form-login").reset();
+    showView("view-login");
   });
 
   document.getElementById("btn-role-auftraggeber").addEventListener("click", () => {
@@ -928,13 +968,39 @@
       return;
     }
 
-    const storedName = loadName("auftraggeber");
-    const storedEmail = loadEmail("auftraggeber");
-    if (storedName && storedEmail) {
-      goToAuftraggeberDashboard(storedName, storedEmail, loadAddress());
-    } else {
-      showView("view-form-auftraggeber");
+    pendingLoginRole = "auftraggeber";
+    document.getElementById("login-error").textContent = "";
+    document.getElementById("form-login").reset();
+    showView("view-login");
+  });
+
+  document.getElementById("form-login").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+    const errorEl = document.getElementById("login-error");
+
+    if (!email || !password) {
+      errorEl.textContent = "Bitte fülle alle Felder aus.";
+      return;
     }
+    if (!pendingLoginRole) return;
+
+    const storedName = loadName(pendingLoginRole);
+    if (!storedName) {
+      errorEl.textContent = "Kein Konto gefunden. Bitte registriere dich zuerst.";
+      return;
+    }
+    errorEl.textContent = "";
+    document.getElementById("form-login").reset();
+
+    saveEmail(pendingLoginRole, email);
+    if (pendingLoginRole === "auftragnehmer") {
+      goToAuftragnehmerDashboard(storedName, email);
+    } else {
+      goToAuftraggeberDashboard(storedName, email, loadAddress());
+    }
+    pendingLoginRole = null;
   });
 
   document.getElementById("btn-logout-an").addEventListener("click", () => showView("view-start"));
