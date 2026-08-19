@@ -487,12 +487,23 @@
   }
 
   btnWorkStart.addEventListener("click", () => {
+    const todayKey = formatDateKey(new Date());
+    const eligibleCodes = new Set(
+      state.termine.auftragnehmer
+        .filter(t => t.status === "confirmed" && t.date === todayKey && t.employerCode)
+        .map(t => t.employerCode)
+    );
+    const eligibleEmployers = state.connectedEmployers.filter(emp => eligibleCodes.has(emp.code));
+
     if (state.connectedEmployers.length === 0) {
       workStartError.textContent = "Bitte verbinde dich unter Account zuerst mit einem Auftraggeber.";
       workEmployerSelect.innerHTML = "";
+    } else if (eligibleEmployers.length === 0) {
+      workStartError.textContent = "Für heute ist bei keinem Auftraggeber ein bestätigter Termin eingetragen.";
+      workEmployerSelect.innerHTML = "";
     } else {
       workStartError.textContent = "";
-      workEmployerSelect.innerHTML = state.connectedEmployers
+      workEmployerSelect.innerHTML = eligibleEmployers
         .map(emp => `<option value="${escapeHtml(emp.code)}">Auftraggeber ${escapeHtml(emp.code)}</option>`)
         .join("");
     }
@@ -645,6 +656,7 @@
       title: payload.title,
       date: payload.date,
       time: payload.time,
+      employerCode: payload.employerCode,
       status: "pending",
     });
     saveTermine();
@@ -681,6 +693,7 @@
       title: msg.payload.title,
       date: msg.payload.date,
       time: msg.payload.time,
+      employerCode: msg.payload.employerCode,
       status: "confirmed",
     });
 
@@ -832,8 +845,9 @@
     const time = terminTimeInput.value;
     if (!target || !title || !date || !time) return;
 
+    const employerCode = terminRole === "auftragnehmer" ? target : getOrCreateInviteCode();
     const targetLabel = terminRole === "auftragnehmer" ? `Auftraggeber ${target}` : target;
-    sendTerminRequest(terminRole, { title, date, time }, targetLabel);
+    sendTerminRequest(terminRole, { title, date, time, employerCode }, targetLabel);
     closeTerminModal();
   });
 
