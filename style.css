@@ -464,6 +464,23 @@ h2 {
 .summary-box div { margin-bottom: 6px; }
 .summary-box div:last-child { margin-bottom: 0; }
 .summary-box b { color: var(--text); }
+.editable-name {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 6px;
+  padding: 3px 6px;
+  margin: -3px -6px 6px -6px !important;
+  transition: background 0.15s ease;
+}
+.editable-name:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.editable-name .edit-pencil {
+  font-size: 0.78rem;
+  opacity: 0.6;
+}
 
 /* ---------- Footer ---------- */
 .footer {

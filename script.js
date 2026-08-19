@@ -71,9 +71,46 @@
     } catch (e) {}
   }
 
+  const EMPLOYEES_KEY = "easycheck-employees";
+  function loadEmployees() {
+    try {
+      const raw = localStorage.getItem(EMPLOYEES_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  }
+  function saveEmployees() {
+    try { localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(state.employees)); } catch (e) {}
+  }
+
+  const NAME_KEYS = { auftragnehmer: "easycheck-name-auftragnehmer", auftraggeber: "easycheck-name-auftraggeber" };
+  function loadName(role) {
+    try { return localStorage.getItem(NAME_KEYS[role]); } catch (e) { return null; }
+  }
+  function saveName(role, name) {
+    try { localStorage.setItem(NAME_KEYS[role], name); } catch (e) {}
+  }
+
+  const INVITE_CODE_KEY = "easycheck-invite-code";
+  function getOrCreateInviteCode() {
+    try {
+      let code = localStorage.getItem(INVITE_CODE_KEY);
+      if (!code) {
+        code = generateInviteCode();
+        localStorage.setItem(INVITE_CODE_KEY, code);
+      }
+      return code;
+    } catch (e) {
+      return generateInviteCode();
+    }
+  }
+
   const state = {
     termine: loadTermine(),
-    employees: [],
+    employees: loadEmployees(),
     connectedEmployers: loadConnectedEmployers(),
     workHistory: loadWorkHistory(),
     workSession: loadWorkSession(),
@@ -350,6 +387,15 @@
     renderConnectedEmployers();
     renderAnStats();
     connectForm.reset();
+
+    const workerDisplayName = (document.getElementById("an-welcome-name").textContent || "").trim() || "Auftragnehmer";
+    if (!state.employees.some(emp => emp.name === workerDisplayName && emp.connectionCode === code)) {
+      state.employees.push({ name: workerDisplayName, hours: 0, active: true, connectionCode: code });
+      saveEmployees();
+      renderEmployeeList();
+      const statEl = document.getElementById("ag-stat-mitarbeiter");
+      if (statEl) statEl.textContent = state.employees.length;
+    }
   });
 
   // ---------- Auftragnehmer Home-Statistik ----------
@@ -549,7 +595,7 @@
     }).join("");
   }
 
-  function sendTerminRequest(fromRole, payload) {
+  function sendTerminRequest(fromRole, payload, targetLabel) {
     const toRole = otherRole(fromRole);
     const senderNameEl = document.getElementById(fromRole === "auftragnehmer" ? "an-welcome-name" : "ag-welcome-name");
     const senderName = (senderNameEl && senderNameEl.textContent.trim())
@@ -572,10 +618,11 @@
     saveTermine();
     refreshCalendar(fromRole);
 
+    const forText = targetLabel ? ` (An: ${escapeHtml(targetLabel)})` : "";
     state.postfach[toRole].unshift({
       id: requestId,
       sender: senderName,
-      text: `${payload.title} am ${dateLabel} um ${timeLabel}`,
+      text: `${payload.title} am ${dateLabel} um ${timeLabel}${forText}`,
       unread: true,
       type: "termin-request",
       payload,
@@ -684,6 +731,7 @@
   // ---------- Termin-Modal ----------
   const terminOverlay = document.getElementById("termin-overlay");
   const terminForm = document.getElementById("form-termin");
+  const terminTargetSelect = document.getElementById("termin-target");
   const terminTitleInput = document.getElementById("termin-title");
   const terminDateInput = document.getElementById("termin-date");
   const terminTimeInput = document.getElementById("termin-time");
@@ -694,12 +742,33 @@
     terminRole = null;
   }
 
+  function populateTerminTargets(role) {
+    if (role === "auftragnehmer") {
+      terminTargetSelect.innerHTML = state.connectedEmployers
+        .map(e => `<option value="${escapeHtml(e.code)}">Auftraggeber ${escapeHtml(e.code)}</option>`)
+        .join("");
+    } else {
+      terminTargetSelect.innerHTML = state.employees
+        .map(e => `<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`)
+        .join("");
+    }
+  }
+
   document.querySelectorAll(".fab-add[data-role]").forEach(btn => {
     btn.addEventListener("click", () => {
       terminRole = btn.dataset.role;
       terminForm.reset();
+      populateTerminTargets(terminRole);
       terminOverlay.classList.add("active");
-      terminTitleInput.focus();
+
+      const hasTargets = terminTargetSelect.options.length > 0;
+      terminTargetSelect.disabled = !hasTargets;
+      const emptyMsg = terminRole === "auftragnehmer"
+        ? "Du musst dich zuerst unter Account mit einem Auftraggeber verbinden."
+        : "Du hast noch keine Mitarbeiter. Teile deinen Einladungscode.";
+      terminTargetSelect.innerHTML = hasTargets ? terminTargetSelect.innerHTML : `<option value="">${emptyMsg}</option>`;
+
+      if (hasTargets) terminTitleInput.focus();
     });
   });
 
@@ -712,12 +781,14 @@
     e.preventDefault();
     if (!terminRole) return;
 
+    const target = terminTargetSelect.value;
     const title = terminTitleInput.value.trim();
     const date = terminDateInput.value;
     const time = terminTimeInput.value;
-    if (!title || !date || !time) return;
+    if (!target || !title || !date || !time) return;
 
-    sendTerminRequest(terminRole, { title, date, time });
+    const targetLabel = terminRole === "auftragnehmer" ? `Auftraggeber ${target}` : target;
+    sendTerminRequest(terminRole, { title, date, time }, targetLabel);
     closeTerminModal();
   });
 
@@ -735,6 +806,53 @@
   renderPostfach("auftraggeber");
   setupPostfachActions("auftragnehmer");
   setupPostfachActions("auftraggeber");
+
+  // ---------- Name bearbeiten ----------
+  const editNameOverlay = document.getElementById("edit-name-overlay");
+  const editNameForm = document.getElementById("form-edit-name");
+  const editNameInput = document.getElementById("edit-name-input");
+  let editingNameRole = null;
+
+  function closeEditNameModal() {
+    editNameOverlay.classList.remove("active");
+    editingNameRole = null;
+  }
+
+  document.body.addEventListener("click", (e) => {
+    const trigger = e.target.closest(".editable-name");
+    if (!trigger) return;
+    editingNameRole = trigger.id === "an-name-edit-trigger" ? "auftragnehmer" : "auftraggeber";
+    const valueEl = document.getElementById(editingNameRole === "auftragnehmer" ? "an-name-value" : "ag-name-value");
+    editNameInput.value = valueEl ? valueEl.textContent : "";
+    editNameOverlay.classList.add("active");
+    editNameInput.focus();
+  });
+
+  document.getElementById("edit-name-cancel").addEventListener("click", closeEditNameModal);
+  editNameOverlay.addEventListener("click", (e) => {
+    if (e.target === editNameOverlay) closeEditNameModal();
+  });
+
+  editNameForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!editingNameRole) return;
+    const newName = editNameInput.value.trim();
+    if (!newName) return;
+
+    saveName(editingNameRole, newName);
+
+    if (editingNameRole === "auftragnehmer") {
+      document.getElementById("an-welcome-name").textContent = newName;
+      const valueEl = document.getElementById("an-name-value");
+      if (valueEl) valueEl.textContent = newName;
+    } else {
+      document.getElementById("ag-welcome-name").textContent = newName;
+      const valueEl = document.getElementById("ag-name-value");
+      if (valueEl) valueEl.textContent = newName;
+    }
+
+    closeEditNameModal();
+  });
 
   document.getElementById("btn-login").addEventListener("click", () => {
     pendingRegistration = null;
@@ -829,29 +947,41 @@
 
   function goToAuftragnehmerDashboard(name, extra) {
     saveLastRole("auftragnehmer");
-    document.getElementById("an-welcome-name").textContent = name;
+    const storedName = loadName("auftragnehmer");
+    const finalName = storedName || name;
+    if (!storedName) saveName("auftragnehmer", finalName);
+
+    document.getElementById("an-welcome-name").textContent = finalName;
     document.getElementById("an-welcome-text").textContent =
       "Dein Profil wurde erstellt. Du kannst deine Arbeitszeit jetzt ganz einfach erfassen und im Überblick behalten.";
 
     document.getElementById("an-welcome-summary").innerHTML = extra;
     document.getElementById("an-account-summary").innerHTML =
-      `<div><b>Name:</b> ${name}</div>` + extra;
+      `<div class="editable-name" id="an-name-edit-trigger"><b>Name:</b> <span id="an-name-value">${escapeHtml(finalName)}</span> <span class="edit-pencil">✏️</span></div>` + extra;
 
+    renderAnStats();
     resetNavAn();
     showView("view-app-an");
   }
 
   function goToAuftraggeberDashboard(name, extra) {
     saveLastRole("auftraggeber");
-    document.getElementById("ag-welcome-name").textContent = name;
+    const storedName = loadName("auftraggeber");
+    const finalName = storedName || name;
+    if (!storedName) saveName("auftraggeber", finalName);
+
+    document.getElementById("ag-welcome-name").textContent = finalName;
     document.getElementById("ag-welcome-text").textContent =
       "Dein Profil wurde erstellt. Hier ist der Überblick über deine Mitarbeiter.";
 
     document.getElementById("ag-welcome-summary").innerHTML = extra;
     document.getElementById("ag-account-summary").innerHTML =
-      `<div><b>Name:</b> ${name}</div>` + extra;
+      `<div class="editable-name" id="ag-name-edit-trigger"><b>Name:</b> <span id="ag-name-value">${escapeHtml(finalName)}</span> <span class="edit-pencil">✏️</span></div>` + extra;
 
-    inviteCodeEl.textContent = generateInviteCode();
+    inviteCodeEl.textContent = getOrCreateInviteCode();
+
+    document.getElementById("ag-stat-mitarbeiter").textContent = state.employees.length;
+    renderEmployeeList();
 
     resetNavAg();
     showView("view-app-ag");

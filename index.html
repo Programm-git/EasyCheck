@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EasyCheck – Einfach. Sicher. Checken.</title>
-<link rel="stylesheet" href="style.css?v=32">
+<link rel="stylesheet" href="style.css?v=34">
 </head>
 <body>
 
@@ -30,8 +30,8 @@
       <h1><span class="accent">Einfach</span>. <span class="accent">Sicher</span>. <span class="accent">Checken</span>.</h1>
       <p class="subtitle">EasyCheck hilft dir, Arbeitszeiten einfach zu erfassen und zu kontrollieren – übersichtlich, sicher und unkompliziert.</p>
       <div class="btn-row">
-        <button class="btn btn-primary" id="btn-login">Anmelden</button>
-        <button class="btn btn-ghost" id="btn-register">Registrieren</button>
+        <button class="btn btn-primary" id="btn-register">Registrieren</button>
+        <button class="btn btn-ghost" id="btn-login">Anmelden</button>
       </div>
     </div>
   </section>
@@ -396,6 +396,10 @@
     <h2>Neuer Termin</h2>
     <form id="form-termin">
       <div class="field">
+        <label for="termin-target">An wen?</label>
+        <select id="termin-target" required></select>
+      </div>
+      <div class="field">
         <label for="termin-title">Titel</label>
         <input type="text" id="termin-title" required placeholder="z. B. Schicht, Meeting">
       </div>
@@ -481,6 +485,23 @@
   </div>
 </div>
 
-<script src="script.js?v=33"></script>
+<!-- ============ NAME ÄNDERN (Modal) ============ -->
+<div class="modal-overlay" id="edit-name-overlay">
+  <div class="modal-box">
+    <h2>Name ändern</h2>
+    <form id="form-edit-name">
+      <div class="field">
+        <label for="edit-name-input">Name</label>
+        <input type="text" id="edit-name-input" required placeholder="Dein Name">
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" id="edit-name-cancel">Abbrechen</button>
+        <button type="submit" class="btn btn-primary">Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="script.js?v=34"></script>
 </body>
 </html>
