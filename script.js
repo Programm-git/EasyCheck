@@ -71,19 +71,62 @@
     } catch (e) {}
   }
 
-  const EMPLOYEES_KEY = "easycheck-employees";
-  function loadEmployees() {
+  const DEVICE_ID_KEY = "easycheck-device-id";
+  function getOrCreateDeviceId() {
     try {
-      const raw = localStorage.getItem(EMPLOYEES_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
+      let id = localStorage.getItem(DEVICE_ID_KEY);
+      if (!id) {
+        id = "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem(DEVICE_ID_KEY, id);
       }
-    } catch (e) {}
-    return [];
+      return id;
+    } catch (e) {
+      return "d" + Math.random().toString(36).slice(2, 10);
+    }
   }
-  function saveEmployees() {
-    try { localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(state.employees)); } catch (e) {}
+
+  // ---------- Firebase (geräteübergreifende Verbindung Auftraggeber <-> Auftragnehmer) ----------
+  let fb = window.easyCheckFirebase || null;
+  const onFirebaseReady = new Promise((resolve) => {
+    if (fb) { resolve(fb); return; }
+    window.addEventListener("easycheck-firebase-ready", () => {
+      fb = window.easyCheckFirebase;
+      resolve(fb);
+    }, { once: true });
+  });
+
+  let unsubscribeEmployees = null;
+  function subscribeEmployeesForCode(code) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !code) return;
+      if (unsubscribeEmployees) { unsubscribeEmployees(); unsubscribeEmployees = null; }
+      const q = firebase.query(
+        firebase.collection(firebase.db, "connections"),
+        firebase.where("employerCode", "==", code)
+      );
+      unsubscribeEmployees = firebase.onSnapshot(q, (snapshot) => {
+        state.employees = snapshot.docs.map(d => d.data());
+        renderEmployeeList();
+        const statEl = document.getElementById("ag-stat-mitarbeiter");
+        if (statEl) statEl.textContent = state.employees.length;
+      }, () => {});
+    });
+  }
+
+  function connectEmployeeToFirebase(code, name) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase) return;
+      const deviceId = getOrCreateDeviceId();
+      const ref = firebase.doc(firebase.db, "connections", `${code}_${deviceId}`);
+      firebase.setDoc(ref, {
+        employerCode: code,
+        deviceId,
+        name,
+        hours: 0,
+        active: true,
+        connectedAt: firebase.serverTimestamp(),
+      }, { merge: true }).catch(() => {});
+    });
   }
 
   const NAME_KEYS = { auftragnehmer: "easycheck-name-auftragnehmer", auftraggeber: "easycheck-name-auftraggeber" };
@@ -141,7 +184,7 @@
 
   const state = {
     termine: loadTermine(),
-    employees: loadEmployees(),
+    employees: [],
     connectedEmployers: loadConnectedEmployers(),
     workHistory: loadWorkHistory(),
     workSession: loadWorkSession(),
@@ -421,13 +464,7 @@
     connectForm.reset();
 
     const workerDisplayName = (document.getElementById("an-welcome-name").textContent || "").trim() || "Auftragnehmer";
-    if (!state.employees.some(emp => emp.name === workerDisplayName && emp.connectionCode === code)) {
-      state.employees.push({ name: workerDisplayName, hours: 0, active: true, connectionCode: code });
-      saveEmployees();
-      renderEmployeeList();
-      const statEl = document.getElementById("ag-stat-mitarbeiter");
-      if (statEl) statEl.textContent = state.employees.length;
-    }
+    connectEmployeeToFirebase(code, workerDisplayName);
   });
 
   // ---------- Auftragnehmer Home-Statistik ----------
@@ -1018,7 +1055,10 @@
   });
 
   document.getElementById("btn-logout-an").addEventListener("click", () => showView("view-start"));
-  document.getElementById("btn-logout-ag").addEventListener("click", () => showView("view-start"));
+  document.getElementById("btn-logout-ag").addEventListener("click", () => {
+    if (unsubscribeEmployees) { unsubscribeEmployees(); unsubscribeEmployees = null; }
+    showView("view-start");
+  });
 
   // Bottom navigation, scoped per dashboard (Auftragnehmer / Auftraggeber)
   function setupBottomNav(navId, viewId) {
@@ -1095,10 +1135,12 @@
     document.getElementById("ag-account-summary").innerHTML =
       `<div class="editable-name" id="ag-name-edit-trigger"><b>Name:</b> <span id="ag-name-value">${escapeHtml(finalName)}</span> <span class="edit-pencil">✏️</span></div>` + extra;
 
-    inviteCodeEl.textContent = getOrCreateInviteCode();
+    const inviteCode = getOrCreateInviteCode();
+    inviteCodeEl.textContent = inviteCode;
 
     document.getElementById("ag-stat-mitarbeiter").textContent = state.employees.length;
     renderEmployeeList();
+    subscribeEmployeesForCode(inviteCode);
 
     resetNavAg();
     showView("view-app-ag");
