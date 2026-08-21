@@ -6,23 +6,6 @@
   };
   const today = new Date();
 
-  const TERMINE_KEY = "easycheck-termine";
-  function loadTermine() {
-    try {
-      const raw = localStorage.getItem(TERMINE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && Array.isArray(parsed.auftragnehmer) && Array.isArray(parsed.auftraggeber)) {
-          return parsed;
-        }
-      }
-    } catch (e) {}
-    return { auftragnehmer: [], auftraggeber: [] };
-  }
-  function saveTermine() {
-    try { localStorage.setItem(TERMINE_KEY, JSON.stringify(state.termine)); } catch (e) {}
-  }
-
   const EMPLOYERS_KEY = "easycheck-connected-employers";
   function loadConnectedEmployers() {
     try {
@@ -129,6 +112,80 @@
     });
   }
 
+  // ---------- Termine / Postfach (geräteübergreifend über Firebase) ----------
+  let unsubscribeAppointments = { auftragnehmer: null, auftraggeber: null };
+
+  function handleAppointmentSnapshot(role, snapshot) {
+    const wasAlreadyLoaded = state.appointmentsLoaded[role];
+    const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    state.termine[role] = list;
+
+    snapshot.docChanges().forEach(change => {
+      if (change.type !== "added" && change.type !== "modified") return;
+      const item = { id: change.doc.id, ...change.doc.data() };
+      if (
+        wasAlreadyLoaded &&
+        item.status === "pending" &&
+        item.requestedByRole === otherRole(role) &&
+        state.autoAccept[role]
+      ) {
+        acceptTerminMessage(role, item);
+      }
+    });
+
+    state.appointmentsLoaded[role] = true;
+
+    refreshCalendar(role);
+    renderPostfach(role);
+  }
+
+  function subscribeAppointmentsForAG(code) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !code) return;
+      if (unsubscribeAppointments.auftraggeber) { unsubscribeAppointments.auftraggeber(); }
+      const q = firebase.query(
+        firebase.collection(firebase.db, "appointments"),
+        firebase.where("employerCode", "==", code)
+      );
+      unsubscribeAppointments.auftraggeber = firebase.onSnapshot(q, (snapshot) => {
+        handleAppointmentSnapshot("auftraggeber", snapshot);
+      }, () => {});
+    });
+  }
+
+  function subscribeAppointmentsForAN(deviceId) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !deviceId) return;
+      if (unsubscribeAppointments.auftragnehmer) { unsubscribeAppointments.auftragnehmer(); }
+      const q = firebase.query(
+        firebase.collection(firebase.db, "appointments"),
+        firebase.where("deviceId", "==", deviceId)
+      );
+      unsubscribeAppointments.auftragnehmer = firebase.onSnapshot(q, (snapshot) => {
+        handleAppointmentSnapshot("auftragnehmer", snapshot);
+      }, () => {});
+    });
+  }
+
+  function createAppointmentInFirebase(payload) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase) return;
+      firebase.addDoc(firebase.collection(firebase.db, "appointments"), {
+        ...payload,
+        status: "pending",
+        createdAt: firebase.serverTimestamp(),
+      }).catch(() => {});
+    });
+  }
+
+  function updateAppointmentStatusInFirebase(id, status) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase) return;
+      const ref = firebase.doc(firebase.db, "appointments", id);
+      firebase.updateDoc(ref, { status }).catch(() => {});
+    });
+  }
+
   const NAME_KEYS = { auftragnehmer: "easycheck-name-auftragnehmer", auftraggeber: "easycheck-name-auftraggeber" };
   function loadName(role) {
     try { return localStorage.getItem(NAME_KEYS[role]); } catch (e) { return null; }
@@ -183,7 +240,8 @@
   }
 
   const state = {
-    termine: loadTermine(),
+    termine: { auftragnehmer: [], auftraggeber: [] },
+    appointmentsLoaded: { auftragnehmer: false, auftraggeber: false },
     employees: [],
     connectedEmployers: loadConnectedEmployers(),
     workHistory: loadWorkHistory(),
@@ -272,7 +330,7 @@
     const startWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
     const todayKey = formatDateKey(today);
     const eventCounts = {};
-    state.termine[role].forEach(t => {
+    state.termine[role].filter(t => t.status !== "declined").forEach(t => {
       eventCounts[t.date] = (eventCounts[t.date] || 0) + 1;
     });
 
@@ -329,7 +387,7 @@
   function renderAppointments(role, containerId) {
     const container = document.getElementById(containerId);
     const selected = state.selectedDate[role];
-    let list = [...state.termine[role]];
+    let list = state.termine[role].filter(t => t.status !== "declined");
     if (selected) {
       list = list.filter(t => t.date === selected);
     }
@@ -367,7 +425,7 @@
     const now = new Date();
     const nowKey = formatDateKey(now) + String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0");
     const upcoming = state.termine[role]
-      .filter(t => (t.date + t.time.replace(":", "")) >= nowKey)
+      .filter(t => t.status !== "declined" && (t.date + t.time.replace(":", "")) >= nowKey)
       .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
 
     if (!upcoming) {
@@ -567,6 +625,7 @@
       text,
       unread: true,
       type: "info",
+      sortKey: Date.now(),
     });
     renderPostfach("auftraggeber");
   }
@@ -644,7 +703,27 @@
     const container = document.getElementById(postfachContainerId[role]);
     if (!container) return;
 
-    const messages = state.postfach[role];
+    const requestMessages = state.termine[role]
+      .filter(t => t.requestedByRole === otherRole(role))
+      .map(t => {
+        const [y, m, d] = t.date.split("-").map(Number);
+        const dateLabel = `${d}.${m}.${String(y).slice(-2)}`;
+        const [hh, mm] = t.time.split(":");
+        const timeLabel = mm === "00" ? `${Number(hh)} Uhr` : `${t.time} Uhr`;
+        return {
+          id: t.id,
+          sender: t.requestedByName || (otherRole(role) === "auftragnehmer" ? "Ein Auftragnehmer" : "Ein Auftraggeber"),
+          text: `${t.title} am ${dateLabel} um ${timeLabel}`,
+          unread: t.status === "pending",
+          type: "termin-request",
+          status: t.status,
+          sortKey: (t.createdAt && t.createdAt.toMillis) ? t.createdAt.toMillis() : Date.now(),
+        };
+      });
+
+    const notifications = state.postfach[role];
+    const messages = [...requestMessages, ...notifications].sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0));
+
     if (messages.length === 0) {
       container.innerHTML = `<div class="appointment-empty">Keine Nachrichten vorhanden.</div>`;
       return;
@@ -659,7 +738,7 @@
             <button type="button" class="message-icon-btn accept message-accept" data-id="${msg.id}" aria-label="Annehmen">✓</button>
           </div>`;
       } else if (msg.type === "termin-request") {
-        const accepted = msg.status === "accepted";
+        const accepted = msg.status === "confirmed";
         actions = `<span class="employee-status ${accepted ? "status-active" : "status-offline"} message-status-badge">${accepted ? "Angenommen ✓" : "Abgelehnt ✗"}</span>`;
       }
 
@@ -675,76 +754,28 @@
     }).join("");
   }
 
-  function sendTerminRequest(fromRole, payload, targetLabel) {
-    const toRole = otherRole(fromRole);
+  function sendTerminRequest(fromRole, payload) {
     const senderNameEl = document.getElementById(fromRole === "auftragnehmer" ? "an-welcome-name" : "ag-welcome-name");
     const senderName = (senderNameEl && senderNameEl.textContent.trim())
       || (fromRole === "auftragnehmer" ? "Ein Auftragnehmer" : "Ein Auftraggeber");
 
-    const [y, m, d] = payload.date.split("-").map(Number);
-    const dateLabel = `${d}.${m}.${String(y).slice(-2)}`;
-    const [hh, mm] = payload.time.split(":");
-    const timeLabel = mm === "00" ? `${Number(hh)} Uhr` : `${payload.time} Uhr`;
-
-    const requestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
-    state.termine[fromRole].push({
-      id: requestId,
+    createAppointmentInFirebase({
+      employerCode: payload.employerCode,
+      deviceId: payload.deviceId,
       title: payload.title,
       date: payload.date,
       time: payload.time,
-      employerCode: payload.employerCode,
-      status: "pending",
+      requestedByRole: fromRole,
+      requestedByName: senderName,
     });
-    saveTermine();
-    refreshCalendar(fromRole);
-
-    const forText = targetLabel ? ` (An: ${escapeHtml(targetLabel)})` : "";
-    state.postfach[toRole].unshift({
-      id: requestId,
-      sender: senderName,
-      text: `${payload.title} am ${dateLabel} um ${timeLabel}${forText}`,
-      unread: true,
-      type: "termin-request",
-      payload,
-      fromRole,
-      status: "pending",
-    });
-
-    if (state.autoAccept[toRole]) {
-      acceptTerminMessage(toRole, state.postfach[toRole][0]);
-    }
-
-    renderPostfach(toRole);
   }
 
   function acceptTerminMessage(role, msg) {
-    msg.status = "accepted";
-    msg.unread = false;
-
-    const senderEntry = state.termine[msg.fromRole].find(t => t.id === msg.id);
-    if (senderEntry) senderEntry.status = "confirmed";
-
-    state.termine[role].push({
-      id: msg.id,
-      title: msg.payload.title,
-      date: msg.payload.date,
-      time: msg.payload.time,
-      employerCode: msg.payload.employerCode,
-      status: "confirmed",
-    });
-
-    saveTermine();
-    refreshCalendar(role);
-    refreshCalendar(msg.fromRole);
+    updateAppointmentStatusInFirebase(msg.id, "confirmed");
   }
 
   function declineTerminMessage(role, msg) {
-    msg.status = "declined";
-    msg.unread = false;
-    state.termine[msg.fromRole] = state.termine[msg.fromRole].filter(t => t.id !== msg.id);
-    saveTermine();
-    refreshCalendar(msg.fromRole);
+    updateAppointmentStatusInFirebase(msg.id, "declined");
   }
 
   function setupPostfachActions(role) {
@@ -757,7 +788,7 @@
       if (!acceptBtn && !declineBtn) return;
 
       const id = (acceptBtn || declineBtn).dataset.id;
-      const msg = state.postfach[role].find(m => m.id === id);
+      const msg = state.termine[role].find(t => t.id === id);
       if (!msg) return;
 
       if (acceptBtn) {
@@ -765,8 +796,6 @@
       } else {
         declineTerminMessage(role, msg);
       }
-
-      renderPostfach(role);
     });
   }
 
@@ -844,7 +873,7 @@
         .join("");
     } else {
       terminTargetSelect.innerHTML = state.employees
-        .map(e => `<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`)
+        .map(e => `<option value="${escapeHtml(e.deviceId)}">${escapeHtml(e.name)}</option>`)
         .join("");
     }
   }
@@ -883,8 +912,8 @@
     if (!target || !title || !date || !time) return;
 
     const employerCode = terminRole === "auftragnehmer" ? target : getOrCreateInviteCode();
-    const targetLabel = terminRole === "auftragnehmer" ? `Auftraggeber ${target}` : target;
-    sendTerminRequest(terminRole, { title, date, time, employerCode }, targetLabel);
+    const deviceId = terminRole === "auftragnehmer" ? getOrCreateDeviceId() : target;
+    sendTerminRequest(terminRole, { title, date, time, employerCode, deviceId });
     closeTerminModal();
   });
 
@@ -1106,6 +1135,7 @@
       `<div class="editable-name" id="an-name-edit-trigger"><b>Name:</b> <span id="an-name-value">${escapeHtml(finalName)}</span> <span class="edit-pencil">✏️</span></div>` + extra;
 
     renderAnStats();
+    subscribeAppointmentsForAN(getOrCreateDeviceId());
     resetNavAn();
     showView("view-app-an");
   }
@@ -1141,6 +1171,7 @@
     document.getElementById("ag-stat-mitarbeiter").textContent = state.employees.length;
     renderEmployeeList();
     subscribeEmployeesForCode(inviteCode);
+    subscribeAppointmentsForAG(inviteCode);
 
     resetNavAg();
     showView("view-app-ag");
