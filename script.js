@@ -186,6 +186,45 @@
     });
   }
 
+  let unsubscribeNotifications = null;
+  function subscribeNotificationsForAG(code) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !code) return;
+      if (unsubscribeNotifications) { unsubscribeNotifications(); }
+      const q = firebase.query(
+        firebase.collection(firebase.db, "notifications"),
+        firebase.where("employerCode", "==", code)
+      );
+      unsubscribeNotifications = firebase.onSnapshot(q, (snapshot) => {
+        state.postfach.auftraggeber = snapshot.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            sender: data.sender,
+            text: data.text,
+            unread: true,
+            type: "info",
+            sortKey: (data.createdAt && data.createdAt.toMillis) ? data.createdAt.toMillis() : Date.now(),
+          };
+        });
+        renderPostfach("auftraggeber");
+      }, () => {});
+    });
+  }
+
+  function sendWorkNotificationToFirebase(employerCode, sender, text) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !employerCode) return;
+      firebase.addDoc(firebase.collection(firebase.db, "notifications"), {
+        employerCode,
+        deviceId: getOrCreateDeviceId(),
+        sender,
+        text,
+        createdAt: firebase.serverTimestamp(),
+      }).catch(() => {});
+    });
+  }
+
   const NAME_KEYS = { auftragnehmer: "easycheck-name-auftragnehmer", auftraggeber: "easycheck-name-auftraggeber" };
   function loadName(role) {
     try { return localStorage.getItem(NAME_KEYS[role]); } catch (e) { return null; }
@@ -618,16 +657,8 @@
     return (el && el.textContent.trim()) || "Ein Auftragnehmer";
   }
 
-  function sendWorkNotification(text) {
-    state.postfach.auftraggeber.unshift({
-      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      sender: workerName(),
-      text,
-      unread: true,
-      type: "info",
-      sortKey: Date.now(),
-    });
-    renderPostfach("auftraggeber");
+  function sendWorkNotification(employerCode, text) {
+    sendWorkNotificationToFirebase(employerCode, workerName(), text);
   }
 
   formWorkStart.addEventListener("submit", (e) => {
@@ -649,7 +680,7 @@
     updateWorkButtons();
     workStartOverlay.classList.remove("active");
 
-    sendWorkNotification(`${workerName()} hat die Arbeitszeit gestartet (Auftraggeber ${escapeHtml(employerCode)}).`);
+    sendWorkNotification(employerCode, `${workerName()} hat die Arbeitszeit gestartet (Auftraggeber ${escapeHtml(employerCode)}).`);
   });
 
   btnWorkStop.addEventListener("click", () => {
@@ -682,7 +713,7 @@
     document.getElementById("work-result-money").textContent = earningsLabel;
     workResultOverlay.classList.add("active");
 
-    sendWorkNotification(`${workerName()} hat die Arbeitszeit beendet: ${durationLabel} gearbeitet, ${earningsLabel} verdient.`);
+    sendWorkNotification(session.employerCode, `${workerName()} hat die Arbeitszeit beendet: ${durationLabel} gearbeitet, ${earningsLabel} verdient.`);
   });
 
   document.getElementById("work-result-close").addEventListener("click", () => {
@@ -1172,6 +1203,7 @@
     renderEmployeeList();
     subscribeEmployeesForCode(inviteCode);
     subscribeAppointmentsForAG(inviteCode);
+    subscribeNotificationsForAG(inviteCode);
 
     resetNavAg();
     showView("view-app-ag");
