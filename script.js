@@ -619,23 +619,12 @@
   }
 
   btnWorkStart.addEventListener("click", () => {
-    const todayKey = formatDateKey(new Date());
-    const eligibleCodes = new Set(
-      state.termine.auftragnehmer
-        .filter(t => t.status === "confirmed" && t.date === todayKey && t.employerCode)
-        .map(t => t.employerCode)
-    );
-    const eligibleEmployers = state.connectedEmployers.filter(emp => eligibleCodes.has(emp.code));
-
     if (state.connectedEmployers.length === 0) {
       workStartError.textContent = "Bitte verbinde dich unter Account zuerst mit einem Auftraggeber.";
       workEmployerSelect.innerHTML = "";
-    } else if (eligibleEmployers.length === 0) {
-      workStartError.textContent = "Für heute ist bei keinem Auftraggeber ein bestätigter Termin eingetragen.";
-      workEmployerSelect.innerHTML = "";
     } else {
       workStartError.textContent = "";
-      workEmployerSelect.innerHTML = eligibleEmployers
+      workEmployerSelect.innerHTML = state.connectedEmployers
         .map(emp => `<option value="${escapeHtml(emp.code)}">Auftraggeber ${escapeHtml(emp.code)}</option>`)
         .join("");
     }
