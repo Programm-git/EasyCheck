@@ -101,7 +101,7 @@ body {
   border-radius: 999px;
   padding: 6px 14px;
 }
-body.role-ag .topbar-badge {
+body.show-nav .topbar-badge {
   display: inline-block;
 }
 .brand-dot {

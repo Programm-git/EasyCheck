@@ -320,6 +320,12 @@
       nav.classList.toggle("active", nav.id === navId);
     });
 
+    const topbarBadge = document.getElementById("topbar-badge");
+    if (topbarBadge) {
+      if (id === "view-app-an") topbarBadge.textContent = "Auftragnehmer";
+      else if (id === "view-app-ag") topbarBadge.textContent = "Auftraggeber";
+    }
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
