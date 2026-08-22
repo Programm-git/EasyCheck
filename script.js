@@ -6,21 +6,6 @@
   };
   const today = new Date();
 
-  const EMPLOYERS_KEY = "easycheck-connected-employers";
-  function loadConnectedEmployers() {
-    try {
-      const raw = localStorage.getItem(EMPLOYERS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {}
-    return [];
-  }
-  function saveConnectedEmployers() {
-    try { localStorage.setItem(EMPLOYERS_KEY, JSON.stringify(state.connectedEmployers)); } catch (e) {}
-  }
-
   const WORK_HISTORY_KEY = "easycheck-work-history";
   function loadWorkHistory() {
     try {
@@ -92,6 +77,23 @@
         renderEmployeeList();
         const statEl = document.getElementById("ag-stat-mitarbeiter");
         if (statEl) statEl.textContent = state.employees.length;
+      }, () => {});
+    });
+  }
+
+  let unsubscribeConnectedEmployers = null;
+  function subscribeEmployersForAN(deviceId) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !deviceId) return;
+      if (unsubscribeConnectedEmployers) { unsubscribeConnectedEmployers(); unsubscribeConnectedEmployers = null; }
+      const q = firebase.query(
+        firebase.collection(firebase.db, "connections"),
+        firebase.where("deviceId", "==", deviceId)
+      );
+      unsubscribeConnectedEmployers = firebase.onSnapshot(q, (snapshot) => {
+        state.connectedEmployers = snapshot.docs.map(d => ({ code: d.data().employerCode }));
+        renderConnectedEmployers();
+        renderAnStats();
       }, () => {});
     });
   }
@@ -282,7 +284,7 @@
     termine: { auftragnehmer: [], auftraggeber: [] },
     appointmentsLoaded: { auftragnehmer: false, auftraggeber: false },
     employees: [],
-    connectedEmployers: loadConnectedEmployers(),
+    connectedEmployers: [],
     workHistory: loadWorkHistory(),
     workSession: loadWorkSession(),
     autoAccept: loadAutoAccept(),
@@ -554,10 +556,6 @@
     }
 
     connectErrorEl.textContent = "";
-    state.connectedEmployers.push({ code, connectedAt: new Date().toISOString() });
-    saveConnectedEmployers();
-    renderConnectedEmployers();
-    renderAnStats();
     connectForm.reset();
 
     const workerDisplayName = (document.getElementById("an-welcome-name").textContent || "").trim() || "Auftragnehmer";
@@ -1167,6 +1165,7 @@
 
     renderAnStats();
     subscribeAppointmentsForAN(getOrCreateDeviceId());
+    subscribeEmployersForAN(getOrCreateDeviceId());
     resetNavAn();
     showView("view-app-an");
   }
