@@ -295,7 +295,6 @@
     },
     selectedDate: { auftragnehmer: null, auftraggeber: null },
   };
-  let pendingRegistration = null;
 
   function nameFromEmail(email) {
     const local = email.split("@")[0] || email;
@@ -1015,14 +1014,37 @@
     closeEditNameModal();
   });
 
+  let pendingRegisterRole = null;
+
+  document.getElementById("btn-register").addEventListener("click", () => showView("view-role"));
   document.getElementById("btn-login").addEventListener("click", () => {
-    pendingRegistration = null;
-    showView("view-role");
+    document.getElementById("login-error").textContent = "";
+    document.getElementById("form-login").reset();
+    showView("view-login");
   });
-  document.getElementById("btn-register").addEventListener("click", () => showView("view-register"));
+
+  document.querySelectorAll("[data-back]").forEach(btn => {
+    btn.addEventListener("click", () => showView(btn.dataset.back));
+  });
+
+  document.getElementById("btn-role-auftragnehmer").addEventListener("click", () => {
+    pendingRegisterRole = "auftragnehmer";
+    document.getElementById("reg-error").textContent = "";
+    document.getElementById("form-register").reset();
+    showView("view-register");
+  });
+
+  document.getElementById("btn-role-auftraggeber").addEventListener("click", () => {
+    pendingRegisterRole = "auftraggeber";
+    document.getElementById("reg-error").textContent = "";
+    document.getElementById("form-register").reset();
+    showView("view-register");
+  });
 
   document.getElementById("form-register").addEventListener("submit", (e) => {
     e.preventDefault();
+    if (!pendingRegisterRole) return;
+
     const email = document.getElementById("reg-email").value.trim();
     const password = document.getElementById("reg-password").value;
     const errorEl = document.getElementById("reg-error");
@@ -1032,50 +1054,14 @@
       return;
     }
     errorEl.textContent = "";
-
     document.getElementById("form-register").reset();
 
-    const lastRole = getLastRole();
-    if (lastRole === "auftragnehmer") {
+    if (pendingRegisterRole === "auftragnehmer") {
       goToAuftragnehmerDashboard(nameFromEmail(email), email);
-    } else if (lastRole === "auftraggeber") {
-      goToAuftraggeberDashboard(nameFromEmail(email), email);
     } else {
-      pendingRegistration = { email };
-      showView("view-role");
+      goToAuftraggeberDashboard(nameFromEmail(email), email);
     }
-  });
-
-  document.querySelectorAll("[data-back]").forEach(btn => {
-    btn.addEventListener("click", () => showView(btn.dataset.back));
-  });
-
-  let pendingLoginRole = null;
-
-  document.getElementById("btn-role-auftragnehmer").addEventListener("click", () => {
-    if (pendingRegistration) {
-      goToAuftragnehmerDashboard(nameFromEmail(pendingRegistration.email), pendingRegistration.email);
-      pendingRegistration = null;
-      return;
-    }
-
-    pendingLoginRole = "auftragnehmer";
-    document.getElementById("login-error").textContent = "";
-    document.getElementById("form-login").reset();
-    showView("view-login");
-  });
-
-  document.getElementById("btn-role-auftraggeber").addEventListener("click", () => {
-    if (pendingRegistration) {
-      goToAuftraggeberDashboard(nameFromEmail(pendingRegistration.email), pendingRegistration.email);
-      pendingRegistration = null;
-      return;
-    }
-
-    pendingLoginRole = "auftraggeber";
-    document.getElementById("login-error").textContent = "";
-    document.getElementById("form-login").reset();
-    showView("view-login");
+    pendingRegisterRole = null;
   });
 
   document.getElementById("form-login").addEventListener("submit", (e) => {
@@ -1088,23 +1074,22 @@
       errorEl.textContent = "Bitte fülle alle Felder aus.";
       return;
     }
-    if (!pendingLoginRole) return;
 
-    const storedName = loadName(pendingLoginRole);
-    if (!storedName) {
+    const role = getLastRole();
+    const storedName = role ? loadName(role) : null;
+    if (!role || !storedName) {
       errorEl.textContent = "Kein Konto gefunden. Bitte registriere dich zuerst.";
       return;
     }
     errorEl.textContent = "";
     document.getElementById("form-login").reset();
 
-    saveEmail(pendingLoginRole, email);
-    if (pendingLoginRole === "auftragnehmer") {
+    saveEmail(role, email);
+    if (role === "auftragnehmer") {
       goToAuftragnehmerDashboard(storedName, email);
     } else {
       goToAuftraggeberDashboard(storedName, email, loadAddress());
     }
-    pendingLoginRole = null;
   });
 
   document.getElementById("btn-logout-an").addEventListener("click", () => showView("view-start"));
