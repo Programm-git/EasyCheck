@@ -233,6 +233,16 @@ h2 {
   border-color: rgba(46, 230, 166, 0.4);
 }
 
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(255, 107, 107, 0.3);
+}
+.btn-danger:not(:disabled):hover {
+  box-shadow: 0 10px 28px rgba(255, 107, 107, 0.45);
+  transform: translateY(-1px);
+}
+
 .btn-block {
   width: 100%;
   margin-top: 6px;
@@ -1104,6 +1114,28 @@ body.show-nav .footer {
 .status-offline {
   color: var(--text-dim);
   background: rgba(255, 255, 255, 0.08);
+}
+.employee-remove {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--surface-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.employee-remove:hover {
+  color: var(--danger);
+  border-color: rgba(255, 107, 107, 0.4);
+  background: rgba(255, 107, 107, 0.1);
 }
 
 /* ---------- Bottom navigation ---------- */

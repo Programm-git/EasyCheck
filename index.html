@@ -548,7 +548,18 @@
   </div>
 </div>
 
-<script type="module" src="firebase-init.js?v=2"></script>
-<script src="script.js?v=40"></script>
+<div class="modal-overlay" id="confirm-remove-overlay">
+  <div class="modal-box">
+    <h2>Verbindung entfernen</h2>
+    <p class="subtitle" id="confirm-remove-text"></p>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="confirm-remove-cancel">Abbrechen</button>
+      <button type="button" class="btn btn-danger" id="confirm-remove-ok">Entfernen</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="firebase-init.js?v=3"></script>
+<script src="script.js?v=41"></script>
 </body>
 </html>

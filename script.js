@@ -73,7 +73,7 @@
         firebase.where("employerCode", "==", code)
       );
       unsubscribeEmployees = firebase.onSnapshot(q, (snapshot) => {
-        state.employees = snapshot.docs.map(d => d.data());
+        state.employees = snapshot.docs.map(d => ({ connectionId: d.id, ...d.data() }));
         renderEmployeeList();
         const statEl = document.getElementById("ag-stat-mitarbeiter");
         if (statEl) statEl.textContent = state.employees.length;
@@ -91,10 +91,17 @@
         firebase.where("deviceId", "==", deviceId)
       );
       unsubscribeConnectedEmployers = firebase.onSnapshot(q, (snapshot) => {
-        state.connectedEmployers = snapshot.docs.map(d => ({ code: d.data().employerCode }));
+        state.connectedEmployers = snapshot.docs.map(d => ({ connectionId: d.id, code: d.data().employerCode }));
         renderConnectedEmployers();
         renderAnStats();
       }, () => {});
+    });
+  }
+
+  function removeConnectionFromFirebase(connectionId) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !connectionId) return;
+      firebase.deleteDoc(firebase.doc(firebase.db, "connections", connectionId)).catch(() => {});
     });
   }
 
@@ -518,6 +525,7 @@
           <div class="employee-meta">${emp.hours.toLocaleString("de-DE")} Std. diesen Monat</div>
         </div>
         <span class="employee-status ${emp.active ? "status-active" : "status-offline"}">${emp.active ? "Aktiv" : "Offline"}</span>
+        <button type="button" class="employee-remove" data-connection-id="${escapeHtml(emp.connectionId)}" data-label="${escapeHtml(emp.name)}" aria-label="${escapeHtml(emp.name)} entfernen">✕</button>
       </div>
     `).join("");
   }
@@ -540,9 +548,45 @@
           <div class="employee-meta">Verbunden</div>
         </div>
         <span class="employee-status status-active">Aktiv</span>
+        <button type="button" class="employee-remove" data-connection-id="${escapeHtml(emp.connectionId)}" data-label="Auftraggeber ${escapeHtml(emp.code)}" aria-label="Auftraggeber ${escapeHtml(emp.code)} entfernen">✕</button>
       </div>
     `).join("");
   }
+
+  // ---------- Verbindung entfernen ----------
+  const confirmRemoveOverlay = document.getElementById("confirm-remove-overlay");
+  const confirmRemoveText = document.getElementById("confirm-remove-text");
+  let pendingRemovalId = null;
+
+  function closeConfirmRemove() {
+    confirmRemoveOverlay.classList.remove("active");
+    pendingRemovalId = null;
+  }
+
+  function setupRemoveButtons(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.addEventListener("click", (e) => {
+      const btn = e.target.closest(".employee-remove");
+      if (!btn) return;
+      pendingRemovalId = btn.dataset.connectionId;
+      confirmRemoveText.textContent =
+        `Soll die Verbindung zu ${btn.dataset.label} wirklich entfernt werden? Bereits erfasste Arbeitszeiten bleiben erhalten.`;
+      confirmRemoveOverlay.classList.add("active");
+    });
+  }
+
+  setupRemoveButtons("ag-employee-list");
+  setupRemoveButtons("an-employer-list");
+
+  document.getElementById("confirm-remove-cancel").addEventListener("click", closeConfirmRemove);
+  confirmRemoveOverlay.addEventListener("click", (e) => {
+    if (e.target === confirmRemoveOverlay) closeConfirmRemove();
+  });
+  document.getElementById("confirm-remove-ok").addEventListener("click", () => {
+    if (pendingRemovalId) removeConnectionFromFirebase(pendingRemovalId);
+    closeConfirmRemove();
+  });
 
   const connectForm = document.getElementById("form-connect-employer");
   const connectCodeInput = document.getElementById("connect-code");
