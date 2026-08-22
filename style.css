@@ -1115,7 +1115,7 @@ body.show-nav .footer {
   color: var(--text-dim);
   background: rgba(255, 255, 255, 0.08);
 }
-.employee-remove {
+.row-remove {
   width: 30px;
   height: 30px;
   flex-shrink: 0;
@@ -1132,7 +1132,7 @@ body.show-nav .footer {
   font-family: inherit;
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
-.employee-remove:hover {
+.row-remove:hover {
   color: var(--danger);
   border-color: rgba(255, 107, 107, 0.4);
   background: rgba(255, 107, 107, 0.1);

@@ -195,6 +195,13 @@
     });
   }
 
+  function removeAppointmentFromFirebase(id) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !id) return;
+      firebase.deleteDoc(firebase.doc(firebase.db, "appointments", id)).catch(() => {});
+    });
+  }
+
   let unsubscribeNotifications = null;
   function subscribeNotificationsForAG(code) {
     onFirebaseReady.then((firebase) => {
@@ -437,6 +444,12 @@
     });
   }
 
+  function isFutureAppointment(t) {
+    const now = new Date();
+    const nowKey = formatDateKey(now) + String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0");
+    return (t.date + t.time.replace(":", "")) >= nowKey;
+  }
+
   function renderAppointments(role, containerId) {
     const container = document.getElementById(containerId);
     const selected = state.selectedDate[role];
@@ -460,6 +473,9 @@
       } else if (t.status === "confirmed") {
         statusBadge = `<span class="appointment-confirmed">Bestätigt ✓</span>`;
       }
+      const removeBtn = isFutureAppointment(t)
+        ? `<button type="button" class="row-remove appointment-remove" data-appointment-id="${escapeHtml(t.id)}" data-label="${escapeHtml(t.title)}" aria-label="${escapeHtml(t.title)} löschen">✕</button>`
+        : "";
       return `<div class="appointment-row">
         <div class="appointment-date"><div class="day">${d}</div><div class="month">${monthShort[m - 1]}</div></div>
         <div class="appointment-info">
@@ -467,6 +483,7 @@
           <div class="appointment-time">${escapeHtml(t.time)} Uhr</div>
         </div>
         ${statusBadge}
+        ${removeBtn}
       </div>`;
     }).join("");
   }
@@ -475,10 +492,8 @@
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const now = new Date();
-    const nowKey = formatDateKey(now) + String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0");
     const upcoming = state.termine[role]
-      .filter(t => t.status !== "declined" && (t.date + t.time.replace(":", "")) >= nowKey)
+      .filter(t => t.status !== "declined" && isFutureAppointment(t))
       .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
 
     if (!upcoming) {
@@ -525,7 +540,7 @@
           <div class="employee-meta">${emp.hours.toLocaleString("de-DE")} Std. diesen Monat</div>
         </div>
         <span class="employee-status ${emp.active ? "status-active" : "status-offline"}">${emp.active ? "Aktiv" : "Offline"}</span>
-        <button type="button" class="employee-remove" data-connection-id="${escapeHtml(emp.connectionId)}" data-label="${escapeHtml(emp.name)}" aria-label="${escapeHtml(emp.name)} entfernen">✕</button>
+        <button type="button" class="row-remove connection-remove" data-connection-id="${escapeHtml(emp.connectionId)}" data-label="${escapeHtml(emp.name)}" aria-label="${escapeHtml(emp.name)} entfernen">✕</button>
       </div>
     `).join("");
   }
@@ -548,45 +563,74 @@
           <div class="employee-meta">Verbunden</div>
         </div>
         <span class="employee-status status-active">Aktiv</span>
-        <button type="button" class="employee-remove" data-connection-id="${escapeHtml(emp.connectionId)}" data-label="Auftraggeber ${escapeHtml(emp.code)}" aria-label="Auftraggeber ${escapeHtml(emp.code)} entfernen">✕</button>
+        <button type="button" class="row-remove connection-remove" data-connection-id="${escapeHtml(emp.connectionId)}" data-label="Auftraggeber ${escapeHtml(emp.code)}" aria-label="Auftraggeber ${escapeHtml(emp.code)} entfernen">✕</button>
       </div>
     `).join("");
   }
 
-  // ---------- Verbindung entfernen ----------
+  // ---------- Bestätigungsdialog (Verbindungen und Termine entfernen) ----------
   const confirmRemoveOverlay = document.getElementById("confirm-remove-overlay");
+  const confirmRemoveTitle = document.getElementById("confirm-remove-title");
   const confirmRemoveText = document.getElementById("confirm-remove-text");
-  let pendingRemovalId = null;
+  let pendingConfirmAction = null;
 
   function closeConfirmRemove() {
     confirmRemoveOverlay.classList.remove("active");
-    pendingRemovalId = null;
+    pendingConfirmAction = null;
   }
 
-  function setupRemoveButtons(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    container.addEventListener("click", (e) => {
-      const btn = e.target.closest(".employee-remove");
-      if (!btn) return;
-      pendingRemovalId = btn.dataset.connectionId;
-      confirmRemoveText.textContent =
-        `Soll die Verbindung zu ${btn.dataset.label} wirklich entfernt werden? Bereits erfasste Arbeitszeiten bleiben erhalten.`;
-      confirmRemoveOverlay.classList.add("active");
-    });
+  function openConfirmRemove(title, text, onConfirm) {
+    confirmRemoveTitle.textContent = title;
+    confirmRemoveText.textContent = text;
+    pendingConfirmAction = onConfirm;
+    confirmRemoveOverlay.classList.add("active");
   }
-
-  setupRemoveButtons("ag-employee-list");
-  setupRemoveButtons("an-employer-list");
 
   document.getElementById("confirm-remove-cancel").addEventListener("click", closeConfirmRemove);
   confirmRemoveOverlay.addEventListener("click", (e) => {
     if (e.target === confirmRemoveOverlay) closeConfirmRemove();
   });
   document.getElementById("confirm-remove-ok").addEventListener("click", () => {
-    if (pendingRemovalId) removeConnectionFromFirebase(pendingRemovalId);
+    const action = pendingConfirmAction;
     closeConfirmRemove();
+    if (action) action();
   });
+
+  function setupConnectionRemoveButtons(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.addEventListener("click", (e) => {
+      const btn = e.target.closest(".connection-remove");
+      if (!btn) return;
+      const id = btn.dataset.connectionId;
+      openConfirmRemove(
+        "Verbindung entfernen",
+        `Soll die Verbindung zu ${btn.dataset.label} wirklich entfernt werden? Bereits erfasste Arbeitszeiten bleiben erhalten.`,
+        () => removeConnectionFromFirebase(id)
+      );
+    });
+  }
+
+  setupConnectionRemoveButtons("ag-employee-list");
+  setupConnectionRemoveButtons("an-employer-list");
+
+  function setupAppointmentRemoveButtons(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.addEventListener("click", (e) => {
+      const btn = e.target.closest(".appointment-remove");
+      if (!btn) return;
+      const id = btn.dataset.appointmentId;
+      openConfirmRemove(
+        "Termin löschen",
+        `Soll der Termin „${btn.dataset.label}" wirklich gelöscht werden? Er verschwindet damit auch beim anderen.`,
+        () => removeAppointmentFromFirebase(id)
+      );
+    });
+  }
+
+  setupAppointmentRemoveButtons("an-appointments");
+  setupAppointmentRemoveButtons("ag-appointments");
 
   const connectForm = document.getElementById("form-connect-employer");
   const connectCodeInput = document.getElementById("connect-code");
