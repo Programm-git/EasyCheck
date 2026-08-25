@@ -121,6 +121,67 @@
     });
   }
 
+  // ---------- Einladungen per E-Mail (Auftraggeber lädt Auftragnehmer ein) ----------
+  function normalizeEmail(email) {
+    return (email || "").trim().toLowerCase();
+  }
+
+  let unsubscribeInvites = null;
+  function subscribeInvitesForAG(code) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !code) return;
+      if (unsubscribeInvites) { unsubscribeInvites(); unsubscribeInvites = null; }
+      const q = firebase.query(
+        firebase.collection(firebase.db, "invites"),
+        firebase.where("employerCode", "==", code)
+      );
+      unsubscribeInvites = firebase.onSnapshot(q, (snapshot) => {
+        state.invites = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderInviteList();
+      }, () => {});
+    });
+  }
+
+  function addInviteToFirebase(code, email) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !code || !email) return;
+      const ref = firebase.doc(firebase.db, "invites", `${code}_${email}`);
+      firebase.setDoc(ref, {
+        employerCode: code,
+        email,
+        createdAt: firebase.serverTimestamp(),
+      }).catch(() => {});
+    });
+  }
+
+  function removeInviteFromFirebase(inviteId) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !inviteId) return;
+      firebase.deleteDoc(firebase.doc(firebase.db, "invites", inviteId)).catch(() => {});
+    });
+  }
+
+  // Beim Anmelden/Registrieren eines Auftragnehmers: offene Einladungen für seine
+  // E-Mail-Adresse in echte Verbindungen umwandeln und aus der Liste entfernen.
+  function redeemInvitesForEmail(email, name) {
+    onFirebaseReady.then((firebase) => {
+      const normalized = normalizeEmail(email);
+      if (!firebase || !normalized) return;
+      const q = firebase.query(
+        firebase.collection(firebase.db, "invites"),
+        firebase.where("email", "==", normalized)
+      );
+      firebase.getDocs(q).then((snapshot) => {
+        snapshot.docs.forEach((d) => {
+          const code = d.data().employerCode;
+          if (!code) return;
+          connectEmployeeToFirebase(code, name);
+          removeInviteFromFirebase(d.id);
+        });
+      }).catch(() => {});
+    });
+  }
+
   // ---------- Termine / Postfach (geräteübergreifend über Firebase) ----------
   let unsubscribeAppointments = { auftragnehmer: null, auftraggeber: null };
 
@@ -298,6 +359,7 @@
     termine: { auftragnehmer: [], auftraggeber: [] },
     appointmentsLoaded: { auftragnehmer: false, auftraggeber: false },
     employees: [],
+    invites: [],
     connectedEmployers: [],
     workHistory: loadWorkHistory(),
     workSession: loadWorkSession(),
@@ -522,6 +584,32 @@
     }
   }
 
+  // ---------- Eingeladene Mitarbeiter (offene E-Mail-Einladungen) ----------
+  function renderInviteList() {
+    const container = document.getElementById("ag-invite-list");
+    if (!container) return;
+
+    if (state.invites.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = state.invites
+      .slice()
+      .sort((a, b) => a.email.localeCompare(b.email))
+      .map(inv => `
+        <div class="employee-row">
+          <div class="employee-avatar">✉️</div>
+          <div class="employee-info">
+            <div class="employee-name">${escapeHtml(inv.email)}</div>
+            <div class="employee-meta">Wartet auf Registrierung</div>
+          </div>
+          <span class="invite-email-pending">Offen</span>
+          <button type="button" class="row-remove invite-remove" data-invite-id="${escapeHtml(inv.id)}" data-label="${escapeHtml(inv.email)}" aria-label="${escapeHtml(inv.email)} entfernen">✕</button>
+        </div>
+      `).join("");
+  }
+
   // ---------- Mitarbeiterliste ----------
   function renderEmployeeList() {
     const container = document.getElementById("ag-employee-list");
@@ -631,6 +719,44 @@
 
   setupAppointmentRemoveButtons("an-appointments");
   setupAppointmentRemoveButtons("ag-appointments");
+
+  document.getElementById("ag-invite-list").addEventListener("click", (e) => {
+    const btn = e.target.closest(".invite-remove");
+    if (!btn) return;
+    const id = btn.dataset.inviteId;
+    openConfirmRemove(
+      "Einladung entfernen",
+      `Soll die Einladung für ${btn.dataset.label} wirklich von der Liste entfernt werden?`,
+      () => removeInviteFromFirebase(id)
+    );
+  });
+
+  // ---------- Mitarbeiter per E-Mail einladen ----------
+  const inviteEmailForm = document.getElementById("form-invite-email");
+  const inviteEmailInput = document.getElementById("invite-email-input");
+  const inviteEmailError = document.getElementById("invite-email-error");
+
+  inviteEmailForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = normalizeEmail(inviteEmailInput.value);
+
+    if (!email) {
+      inviteEmailError.textContent = "Bitte gib eine E-Mail-Adresse ein.";
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      inviteEmailError.textContent = "Das sieht nicht nach einer gültigen E-Mail-Adresse aus.";
+      return;
+    }
+    if (state.invites.some(inv => inv.email === email)) {
+      inviteEmailError.textContent = "Diese E-Mail-Adresse steht bereits auf der Liste.";
+      return;
+    }
+
+    inviteEmailError.textContent = "";
+    addInviteToFirebase(getOrCreateInviteCode(), email);
+    inviteEmailForm.reset();
+  });
 
   const connectForm = document.getElementById("form-connect-employer");
   const connectCodeInput = document.getElementById("connect-code");
@@ -1234,6 +1360,7 @@
     renderAnStats();
     subscribeAppointmentsForAN(getOrCreateDeviceId());
     subscribeEmployersForAN(getOrCreateDeviceId());
+    redeemInvitesForEmail(finalEmail, finalName);
     resetNavAn();
     showView("view-app-an");
   }
@@ -1271,6 +1398,7 @@
     subscribeEmployeesForCode(inviteCode);
     subscribeAppointmentsForAG(inviteCode);
     subscribeNotificationsForAG(inviteCode);
+    subscribeInvitesForAG(inviteCode);
 
     resetNavAg();
     showView("view-app-ag");

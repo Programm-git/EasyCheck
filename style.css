@@ -891,6 +891,37 @@ body.show-nav .footer {
   color: var(--text);
   font-family: inherit;
 }
+.invite-email-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--surface-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-family: inherit;
+}
+.invite-email-input::placeholder {
+  color: var(--text-dim);
+}
+.invite-email-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+}
+.invite-email-list:not(:empty) {
+  margin-top: 14px;
+}
+.invite-email-pending {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: var(--accent2);
+  background: rgba(34, 211, 238, 0.12);
+}
 .connect-code-input::placeholder {
   letter-spacing: normal;
   text-transform: none;
