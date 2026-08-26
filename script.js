@@ -604,7 +604,6 @@
             <div class="employee-name">${escapeHtml(inv.email)}</div>
             <div class="employee-meta">Wartet auf Registrierung</div>
           </div>
-          <span class="invite-email-pending">Offen</span>
           <button type="button" class="row-remove invite-remove" data-invite-id="${escapeHtml(inv.id)}" data-label="${escapeHtml(inv.email)}" aria-label="${escapeHtml(inv.email)} entfernen">✕</button>
         </div>
       `).join("");

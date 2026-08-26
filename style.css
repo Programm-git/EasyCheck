@@ -453,7 +453,9 @@ h2 {
      Linie liegen, wenn eine Beschriftung zweizeilig umbricht */
   align-items: flex-end;
 }
-.field-row .field { flex: 1; }
+/* min-width: 0 hebt die Mindestbreite auf, die sonst native Felder wie
+   input[type="time"] aus dem Dialog hinauslaufen lässt */
+.field-row .field { flex: 1; min-width: 0; }
 .field-small { max-width: 120px; }
 
 .checkbox-label {
@@ -787,8 +789,16 @@ h2 {
   margin-bottom: 20px;
 }
 .modal-box .btn-row {
-  justify-content: flex-end;
+  justify-content: center;
   margin-top: 6px;
+}
+/* Gleich breite Schaltflächen, damit sie auch auf schmalen Handys
+   nebeneinander passen statt umzubrechen */
+.modal-box .btn-row .btn {
+  flex: 1;
+  min-width: 0;
+  padding-left: 14px;
+  padding-right: 14px;
 }
 
 body.show-nav .stage {
@@ -927,9 +937,17 @@ body.show-nav .footer {
   color: var(--text);
   font-family: inherit;
 }
+#form-invite-email {
+  flex-wrap: wrap;
+}
+/* Auf schmalen Bildschirmen rutscht der Knopf unter das Eingabefeld,
+   statt es auf wenige Zeichen zusammenzuquetschen */
+#form-invite-email .btn {
+  flex: 1 1 auto;
+}
 .invite-email-input {
   flex: 1;
-  min-width: 0;
+  min-width: 170px;
   font-size: 0.92rem;
   padding: 10px 12px;
   border-radius: 10px;
@@ -948,15 +966,6 @@ body.show-nav .footer {
 }
 .invite-email-list:not(:empty) {
   margin-top: 14px;
-}
-.invite-email-pending {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
-  color: var(--accent2);
-  background: rgba(34, 211, 238, 0.12);
 }
 .connect-code-input::placeholder {
   letter-spacing: normal;
@@ -1260,4 +1269,6 @@ body.show-nav .footer {
   .card { padding: 30px 22px; }
   .hero h1 { font-size: 1.5rem; }
   .nav-btn { padding: 9px 16px; }
+  /* mehr Platz im Dialog, sonst laufen breite Felder über den Rand hinaus */
+  .modal-box { padding: 26px 18px; }
 }
