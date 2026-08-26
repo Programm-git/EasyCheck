@@ -841,13 +841,17 @@
   // Zusätzliche Stundenlöhne (z. B. Kind, das weniger pro Stunde bekommt)
   function addExtraRateField() {
     const wrapper = document.createElement("div");
-    wrapper.className = "field";
+    wrapper.className = "field-row extra-rate-group";
     wrapper.innerHTML = `
-      <label>Weiterer Stundenlohn (€)</label>
-      <div class="extra-rate-row">
+      <div class="field">
+        <label>Geld pro Stunde (€)</label>
         <input type="number" class="work-extra-rate" min="0" step="0.01" placeholder="10">
-        <button type="button" class="row-remove extra-rate-remove" aria-label="Diesen Stundenlohn entfernen">✕</button>
-      </div>`;
+      </div>
+      <div class="field">
+        <label>Personen</label>
+        <input type="number" class="work-extra-persons" min="1" step="1" placeholder="1">
+      </div>
+      <button type="button" class="row-remove extra-rate-remove" aria-label="Diesen Stundenlohn entfernen">✕</button>`;
     workExtraRates.appendChild(wrapper);
     wrapper.querySelector("input").focus();
   }
@@ -859,10 +863,16 @@
   });
 
   function readExtraRates() {
-    return [...workExtraRates.querySelectorAll(".work-extra-rate")]
-      .map(input => input.value.trim())
-      .filter(value => value !== "")
-      .map(value => parseFloat(value));
+    return [...workExtraRates.querySelectorAll(".extra-rate-group")]
+      .map(group => ({
+        rate: group.querySelector(".work-extra-rate").value.trim(),
+        persons: group.querySelector(".work-extra-persons").value.trim(),
+      }))
+      .filter(entry => entry.rate !== "" || entry.persons !== "")
+      .map(entry => ({
+        rate: parseFloat(entry.rate),
+        persons: entry.persons === "" ? 1 : parseInt(entry.persons, 10),
+      }));
   }
 
   btnWorkStart.addEventListener("click", () => {
@@ -909,8 +919,8 @@
       workStartError.textContent = "Bitte fülle alle Felder korrekt aus.";
       return;
     }
-    if (extraRates.some(r => !(r > 0))) {
-      workStartError.textContent = "Bitte gib bei jedem weiteren Stundenlohn einen Betrag größer als 0 ein.";
+    if (extraRates.some(entry => !(entry.rate > 0) || !(entry.persons > 0))) {
+      workStartError.textContent = "Bitte fülle bei jedem weiteren Stundenlohn Betrag und Personen korrekt aus.";
       return;
     }
     workStartError.textContent = "";
@@ -928,8 +938,11 @@
     const session = state.workSession;
     const endTime = Date.now();
     const hours = (endTime - session.startTime) / 3600000;
-    const extraRates = session.extraRates || [];
-    const ratePerHour = session.rate * session.persons + extraRates.reduce((sum, r) => sum + r, 0);
+    // Ältere laufende Sitzungen speicherten nur den Betrag ohne Personenzahl.
+    const extraRates = (session.extraRates || []).map(entry =>
+      typeof entry === "number" ? { rate: entry, persons: 1 } : entry);
+    const ratePerHour = session.rate * session.persons
+      + extraRates.reduce((sum, entry) => sum + entry.rate * entry.persons, 0);
     const earnings = hours * ratePerHour;
 
     state.workHistory.push({

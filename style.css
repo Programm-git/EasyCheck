@@ -260,13 +260,10 @@ h2 {
   line-height: 1;
   font-weight: 700;
 }
-.extra-rate-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.extra-rate-row .row-remove {
-  margin-top: 0;
+.extra-rate-group .row-remove {
+  /* .field bringt 18px Abstand nach unten mit; die restlichen 7px sind die
+     halbe Hoehendifferenz zum Eingabefeld, damit das Kreuz mittig sitzt */
+  margin-bottom: 25px;
 }
 
 .btn-danger {
@@ -452,6 +449,9 @@ h2 {
 .field-row {
   display: flex;
   gap: 14px;
+  /* an der Unterkante ausrichten, damit die Eingabefelder auch dann auf einer
+     Linie liegen, wenn eine Beschriftung zweizeilig umbricht */
+  align-items: flex-end;
 }
 .field-row .field { flex: 1; }
 .field-small { max-width: 120px; }
