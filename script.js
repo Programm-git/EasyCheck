@@ -182,6 +182,50 @@
     });
   }
 
+  // ---------- Laufende Arbeitszeit in Firebase sichern ----------
+  // Damit eine laufende Stoppuhr auch einen Gerätewechsel oder einen
+  // geleerten Browser-Speicher übersteht. Schlüssel ist die E-Mail-Adresse,
+  // weil die Geräte-ID selbst im lokalen Speicher liegt und mit ihm verloren ginge.
+  function saveWorkSessionToFirebase(email, session) {
+    onFirebaseReady.then((firebase) => {
+      const key = normalizeEmail(email);
+      if (!firebase || !key) return;
+      const ref = firebase.doc(firebase.db, "worksessions", key);
+      if (session) {
+        firebase.setDoc(ref, { ...session, email: key }).catch(() => {});
+      } else {
+        firebase.deleteDoc(ref).catch(() => {});
+      }
+    });
+  }
+
+  function restoreWorkSessionFromFirebase(email) {
+    onFirebaseReady.then((firebase) => {
+      const key = normalizeEmail(email);
+      if (!firebase || !key) return;
+      firebase.getDoc(firebase.doc(firebase.db, "worksessions", key)).then((snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (!data || !data.startTime) return;
+          state.workSession = {
+            employerCode: data.employerCode,
+            rate: data.rate,
+            persons: data.persons,
+            extraRates: data.extraRates || [],
+            startTime: data.startTime,
+          };
+        } else if (state.workSession) {
+          // Auf einem anderen Gerät bereits gestoppt - lokalen Rest aufräumen.
+          state.workSession = null;
+        } else {
+          return;
+        }
+        saveWorkSession();
+        updateWorkButtons();
+      }).catch(() => {});
+    });
+  }
+
   // ---------- Termine / Postfach (geräteübergreifend über Firebase) ----------
   let unsubscribeAppointments = { auftragnehmer: null, auftraggeber: null };
 
@@ -901,6 +945,10 @@
     return (el && el.textContent.trim()) || "Ein Auftragnehmer";
   }
 
+  function workerEmail() {
+    return loadEmail("auftragnehmer") || "";
+  }
+
   function sendWorkNotification(employerCode, text) {
     sendWorkNotificationToFirebase(employerCode, workerName(), text);
   }
@@ -926,6 +974,7 @@
 
     state.workSession = { employerCode, rate, persons, extraRates, startTime: Date.now() };
     saveWorkSession();
+    saveWorkSessionToFirebase(workerEmail(), state.workSession);
     updateWorkButtons();
     workStartOverlay.classList.remove("active");
 
@@ -958,6 +1007,7 @@
 
     state.workSession = null;
     saveWorkSession();
+    saveWorkSessionToFirebase(workerEmail(), null);
     updateWorkButtons();
     renderAnStats();
 
@@ -1410,6 +1460,7 @@
     subscribeAppointmentsForAN(getOrCreateDeviceId());
     subscribeEmployersForAN(getOrCreateDeviceId());
     redeemInvitesForEmail(finalEmail, finalName);
+    restoreWorkSessionFromFirebase(finalEmail);
     resetNavAn();
     showView("view-app-an");
   }
