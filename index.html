@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EasyCheck – Einfach. Sicher. Checken.</title>
-<link rel="stylesheet" href="style.css?v=39">
+<link rel="stylesheet" href="style.css?v=40">
 </head>
 <body>
 
@@ -511,6 +511,12 @@
           <input type="number" id="work-persons" min="1" step="1" required placeholder="1">
         </div>
       </div>
+
+      <div id="work-extra-rates"></div>
+      <button type="button" class="btn-add-rate" id="work-add-rate">
+        <span class="btn-add-rate-plus">+</span> Weiterer Stundenlohn
+      </button>
+
       <div class="error-msg" id="work-start-error"></div>
       <div class="btn-row">
         <button type="button" class="btn btn-ghost" id="work-start-cancel">Abbrechen</button>
@@ -570,6 +576,6 @@
 </div>
 
 <script type="module" src="firebase-init.js?v=4"></script>
-<script src="script.js?v=43"></script>
+<script src="script.js?v=44"></script>
 </body>
 </html>
