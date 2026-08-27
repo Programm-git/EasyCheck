@@ -766,26 +766,47 @@
     });
     const days = [...byDay.keys()].sort();
     const summaries = days.map(day => summarizeDay(byDay.get(day)));
+    const todayKey = formatDateKey(now);
+    const heute = days.map(day => day === todayKey);
 
-    const kopf = days.map(day => {
+    const kopf = days.map((day, i) => {
       const [, month, dayOfMonth] = day.split("-").map(Number);
-      return `<th>${dayOfMonth}. ${monthShort[month - 1]}</th>`;
+      return `<th class="${heute[i] ? "is-today" : ""}">
+        <span class="worklog-day">${dayOfMonth}</span>
+        <span class="worklog-month">${monthShort[month - 1]}</span>
+      </th>`;
     }).join("");
 
-    const zeile = (label, werte) =>
-      `<tr><th>${label}</th>${werte.map(v => `<td>${escapeHtml(String(v))}</td>`).join("")}</tr>`;
+    const zeile = (icon, label, werte, klasse) =>
+      `<tr class="${klasse}">
+        <th><span class="worklog-icon">${icon}</span>${label}</th>
+        ${werte.map((v, i) => `<td class="${heute[i] ? "is-today" : ""}">${escapeHtml(String(v))}</td>`).join("")}
+      </tr>`;
+
+    const gesamt = summaries.reduce((sum, s) => sum + s.hours, 0);
 
     body.innerHTML = `
       <div class="worklog-scroll">
         <table class="worklog-table">
           <thead><tr><th>Tag</th>${kopf}</tr></thead>
           <tbody>
-            ${zeile("Stundenlohn", summaries.map(s => s.rates))}
-            ${zeile("Stunden", summaries.map(s => s.hours.toLocaleString("de-DE", { maximumFractionDigits: 2 })))}
-            ${zeile("Personen", summaries.map(s => s.persons))}
+            ${zeile("💶", "Stundenlohn", summaries.map(s => s.rates), "")}
+            ${zeile("⏱", "Stunden", summaries.map(s => s.hours.toLocaleString("de-DE", { maximumFractionDigits: 2 })), "worklog-row-hours")}
+            ${zeile("👥", "Personen", summaries.map(s => s.persons), "")}
           </tbody>
         </table>
-      </div>`;
+      </div>
+      <div class="worklog-footer">
+        <span>${days.length} ${days.length === 1 ? "Arbeitstag" : "Arbeitstage"}</span>
+        <span class="worklog-total">${gesamt.toLocaleString("de-DE", { maximumFractionDigits: 2 })} Std. gesamt</span>
+      </div>
+      <div class="worklog-hint hidden">Seitlich wischen für weitere Tage</div>`;
+
+    // Hinweis nur zeigen, wenn die Tabelle wirklich breiter ist als der Platz
+    const scroller = body.querySelector(".worklog-scroll");
+    if (scroller.scrollWidth > scroller.clientWidth + 1) {
+      body.querySelector(".worklog-hint").classList.remove("hidden");
+    }
   }
 
   function openEmployeeDetail(deviceId, name) {
@@ -793,8 +814,10 @@
     document.getElementById("employee-detail-name").textContent = name;
     document.getElementById("employee-detail-sub").textContent =
       `Arbeitstage im ${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}.`;
-    renderEmployeeDetail();
+    // erst einblenden, dann rendern: solange der Dialog verborgen ist, sind
+    // alle Breiten 0 und der Wisch-Hinweis liesse sich nicht ermitteln
     employeeDetailOverlay.classList.add("active");
+    renderEmployeeDetail();
   }
 
   function closeEmployeeDetail() {

@@ -1203,38 +1203,122 @@ body.show-nav .footer {
 /* ---------- Arbeitstage-Tabelle (Mitarbeiter-Detail) ---------- */
 .worklog-scroll {
   overflow-x: auto;
-  margin-bottom: 18px;
   -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--surface-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
 }
 .worklog-table {
-  border-collapse: collapse;
-  font-size: 0.84rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 0.85rem;
   white-space: nowrap;
+  /* gleich breite Ziffern, damit die Zahlen spaltenweise untereinander stehen */
+  font-variant-numeric: tabular-nums;
 }
 .worklog-table th,
 .worklog-table td {
-  border: 1px solid var(--surface-border);
-  padding: 9px 12px;
+  padding: 11px 14px;
   text-align: center;
+  border-bottom: 1px solid var(--surface-border);
 }
+.worklog-table tr:last-child th,
+.worklog-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Kopfzeile: Tag gross, Monat klein darunter */
 .worklog-table thead th {
-  font-weight: 700;
+  background: rgba(124, 92, 255, 0.16);
   color: var(--text);
-  background: rgba(255, 255, 255, 0.06);
+  line-height: 1.15;
+  padding-top: 9px;
+  padding-bottom: 9px;
 }
-/* erste Spalte als Beschriftung stehen lassen, auch beim seitlichen Scrollen */
+.worklog-day {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.worklog-month {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* Beschriftungsspalte bleibt beim seitlichen Wischen stehen */
 .worklog-table tbody th,
 .worklog-table thead th:first-child {
   position: sticky;
   left: 0;
-  z-index: 1;
+  z-index: 2;
   text-align: left;
   font-weight: 600;
+  font-size: 0.8rem;
   color: var(--text-dim);
   background: #1b1830;
+  border-right: 1px solid var(--surface-border);
+}
+.worklog-table thead th:first-child {
+  background: #241f42;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.worklog-icon {
+  margin-right: 7px;
+  opacity: 0.85;
 }
 .worklog-table tbody td {
   color: var(--text);
+}
+/* die Stundenzeile ist die wichtigste Zahl */
+.worklog-row-hours td {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent2);
+}
+/* heutiger Tag hervorgehoben */
+.worklog-table thead th.is-today {
+  background: var(--accent-grad);
+}
+.worklog-table thead th.is-today .worklog-month {
+  color: rgba(255, 255, 255, 0.85);
+}
+.worklog-table td.is-today {
+  background: rgba(124, 92, 255, 0.1);
+}
+
+.worklog-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.worklog-total {
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(46, 230, 166, 0.14);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+.worklog-hint {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  text-align: center;
+  margin-bottom: 14px;
+}
+/* Tabellen brauchen mehr Platz als die uebrigen Dialoge */
+#employee-detail-overlay .modal-box {
+  max-width: 640px;
 }
 
 .row-remove {
