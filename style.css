@@ -1204,9 +1204,6 @@ body.show-nav .footer {
 .worklog-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--surface-border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
 }
 .worklog-table {
   border-collapse: separate;
@@ -1219,22 +1216,16 @@ body.show-nav .footer {
 }
 .worklog-table th,
 .worklog-table td {
-  padding: 11px 14px;
+  padding: 10px 16px;
   text-align: center;
-  border-bottom: 1px solid var(--surface-border);
-}
-.worklog-table tr:last-child th,
-.worklog-table tr:last-child td {
-  border-bottom: none;
+  border: none;
 }
 
 /* Kopfzeile: Tag gross, Monat klein darunter */
 .worklog-table thead th {
-  background: rgba(124, 92, 255, 0.16);
   color: var(--text);
   line-height: 1.15;
-  padding-top: 9px;
-  padding-bottom: 9px;
+  padding-bottom: 14px;
 }
 .worklog-day {
   display: block;
@@ -1250,7 +1241,7 @@ body.show-nav .footer {
   color: var(--text-dim);
 }
 
-/* Beschriftungsspalte bleibt beim seitlichen Wischen stehen */
+/* Beschriftungsspalte bleibt beim seitlichen Wischen stehen. */
 .worklog-table tbody th,
 .worklog-table thead th:first-child {
   position: sticky;
@@ -1260,11 +1251,19 @@ body.show-nav .footer {
   font-weight: 600;
   font-size: 0.8rem;
   color: var(--text-dim);
-  background: #1b1830;
-  border-right: 1px solid var(--surface-border);
+  padding-left: 0;
+  padding-right: 22px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+/* Deckender Hintergrund erst beim Wischen - sonst schoeben sich die Zahlen
+   darunter hindurch. Unverschoben bliebe sonst ein Kasten ohne Zweck stehen. */
+.worklog-scroll.is-scrolled .worklog-table tbody th,
+.worklog-scroll.is-scrolled .worklog-table thead th:first-child {
+  background: #17142a;
+  box-shadow: 10px 0 14px -10px rgba(0, 0, 0, 0.85);
 }
 .worklog-table thead th:first-child {
-  background: #241f42;
   font-size: 0.66rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1278,19 +1277,20 @@ body.show-nav .footer {
 }
 /* die Stundenzeile ist die wichtigste Zahl */
 .worklog-row-hours td {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--accent2);
 }
-/* heutiger Tag hervorgehoben */
-.worklog-table thead th.is-today {
+/* heutiger Tag: nur die Tageszahl als Plakette, ohne Kasten um die Spalte */
+.worklog-table thead th.is-today .worklog-day {
   background: var(--accent-grad);
+  border-radius: 999px;
+  padding: 2px 0;
+  margin-bottom: 2px;
+  color: #fff;
 }
 .worklog-table thead th.is-today .worklog-month {
-  color: rgba(255, 255, 255, 0.85);
-}
-.worklog-table td.is-today {
-  background: rgba(124, 92, 255, 0.1);
+  color: var(--accent2);
 }
 
 .worklog-footer {

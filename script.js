@@ -807,6 +807,9 @@
     if (scroller.scrollWidth > scroller.clientWidth + 1) {
       body.querySelector(".worklog-hint").classList.remove("hidden");
     }
+    scroller.addEventListener("scroll", () => {
+      scroller.classList.toggle("is-scrolled", scroller.scrollLeft > 0);
+    });
   }
 
   function openEmployeeDetail(deviceId, name) {
