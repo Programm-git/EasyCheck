@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EasyCheck – Einfach. Sicher. Checken.</title>
-<link rel="stylesheet" href="style.css?v=42">
+<link rel="stylesheet" href="style.css?v=43">
 </head>
 <body>
 
@@ -564,6 +564,17 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="employee-detail-overlay">
+  <div class="modal-box">
+    <h2 id="employee-detail-name"></h2>
+    <p class="subtitle" id="employee-detail-sub"></p>
+    <div id="employee-detail-body"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-primary btn-block" id="employee-detail-close">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="confirm-remove-overlay">
   <div class="modal-box">
     <h2 id="confirm-remove-title">Verbindung entfernen</h2>
@@ -576,6 +587,6 @@
 </div>
 
 <script type="module" src="firebase-init.js?v=5"></script>
-<script src="script.js?v=47"></script>
+<script src="script.js?v=48"></script>
 </body>
 </html>

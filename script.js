@@ -114,7 +114,6 @@
         employerCode: code,
         deviceId,
         name,
-        hours: 0,
         active: true,
         connectedAt: firebase.serverTimestamp(),
       }, { merge: true }).catch(() => {});
@@ -223,6 +222,30 @@
         saveWorkSession();
         updateWorkButtons();
       }).catch(() => {});
+    });
+  }
+
+  // ---------- Abgeschlossene Arbeitszeiten (für die Mitarbeiter-Statistik) ----------
+  function saveWorkLogToFirebase(entry) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !entry.employerCode) return;
+      firebase.addDoc(firebase.collection(firebase.db, "worklogs"), entry).catch(() => {});
+    });
+  }
+
+  let unsubscribeWorkLogs = null;
+  function subscribeWorkLogsForAG(code) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase || !code) return;
+      if (unsubscribeWorkLogs) { unsubscribeWorkLogs(); unsubscribeWorkLogs = null; }
+      const q = firebase.query(
+        firebase.collection(firebase.db, "worklogs"),
+        firebase.where("employerCode", "==", code)
+      );
+      unsubscribeWorkLogs = firebase.onSnapshot(q, (snapshot) => {
+        state.workLogs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (employeeDetailDeviceId) renderEmployeeDetail();
+      }, () => {});
     });
   }
 
@@ -403,6 +426,7 @@
     termine: { auftragnehmer: [], auftraggeber: [] },
     appointmentsLoaded: { auftragnehmer: false, auftraggeber: false },
     employees: [],
+    workLogs: [],
     invites: [],
     connectedEmployers: [],
     workHistory: loadWorkHistory(),
@@ -664,17 +688,132 @@
     }
 
     container.innerHTML = state.employees.map(emp => `
-      <div class="employee-row">
+      <div class="employee-row employee-row-clickable" data-device-id="${escapeHtml(emp.deviceId || "")}" role="button" tabindex="0">
         <div class="employee-avatar">${escapeHtml(emp.initials || emp.name.slice(0, 2).toUpperCase())}</div>
         <div class="employee-info">
           <div class="employee-name">${escapeHtml(emp.name)}</div>
-          <div class="employee-meta">${emp.hours.toLocaleString("de-DE")} Std. diesen Monat</div>
+          <div class="employee-meta">Tippen für Details</div>
         </div>
         <span class="employee-status ${emp.active ? "status-active" : "status-offline"}">${emp.active ? "Aktiv" : "Offline"}</span>
         <button type="button" class="row-remove connection-remove" data-connection-id="${escapeHtml(emp.connectionId)}" data-label="${escapeHtml(emp.name)}" aria-label="${escapeHtml(emp.name)} entfernen">✕</button>
       </div>
     `).join("");
   }
+
+  // ---------- Detailansicht eines Mitarbeiters ----------
+  const employeeDetailOverlay = document.getElementById("employee-detail-overlay");
+  let employeeDetailDeviceId = null;
+
+  function formatMoney(value) {
+    return value.toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " €";
+  }
+
+  // Fasst alle Sitzungen eines Tages zu Gruppen je Stundenlohn zusammen,
+  // damit Lohn und Personenzahl in der Tabelle untereinander passen.
+  function summarizeDay(logs) {
+    const groups = new Map();
+    let hours = 0;
+    logs.forEach(log => {
+      hours += log.hours || 0;
+      const parts = [{ rate: log.rate, persons: log.persons }].concat(
+        (log.extraRates || []).map(e => (typeof e === "number" ? { rate: e, persons: 1 } : e))
+      );
+      parts.forEach(part => {
+        if (!(part.rate > 0)) return;
+        // Bei mehreren Sitzungen am selben Tag der höchste Wert, nicht die Summe:
+        // zweimal eine Person ist dieselbe Person, nicht zwei.
+        groups.set(part.rate, Math.max(groups.get(part.rate) || 0, part.persons || 0));
+      });
+    });
+    const sorted = [...groups.entries()].sort((a, b) => b[0] - a[0]);
+    return {
+      hours,
+      rates: sorted.map(([rate]) => formatMoney(rate)).join(" + ") || "–",
+      persons: sorted.map(([, persons]) => persons).join(" + ") || "–",
+    };
+  }
+
+  function monthlyHoursFor(deviceId, when) {
+    return state.workLogs
+      .filter(log => {
+        if (log.deviceId !== deviceId || !log.date) return false;
+        const [year, month] = log.date.split("-").map(Number);
+        return year === when.getFullYear() && month - 1 === when.getMonth();
+      })
+      .reduce((sum, log) => sum + (log.hours || 0), 0);
+  }
+
+  function renderEmployeeDetail() {
+    const body = document.getElementById("employee-detail-body");
+    if (!body || !employeeDetailDeviceId) return;
+
+    const now = new Date();
+    const logs = state.workLogs.filter(log => {
+      if (log.deviceId !== employeeDetailDeviceId || !log.date) return false;
+      const [year, month] = log.date.split("-").map(Number);
+      return year === now.getFullYear() && month - 1 === now.getMonth();
+    });
+
+    if (logs.length === 0) {
+      body.innerHTML = `<div class="appointment-empty">In diesem Monat wurden noch keine Arbeitszeiten erfasst.</div>`;
+      return;
+    }
+
+    const byDay = new Map();
+    logs.forEach(log => {
+      if (!byDay.has(log.date)) byDay.set(log.date, []);
+      byDay.get(log.date).push(log);
+    });
+    const days = [...byDay.keys()].sort();
+    const summaries = days.map(day => summarizeDay(byDay.get(day)));
+
+    const kopf = days.map(day => {
+      const [, month, dayOfMonth] = day.split("-").map(Number);
+      return `<th>${dayOfMonth}. ${monthShort[month - 1]}</th>`;
+    }).join("");
+
+    const zeile = (label, werte) =>
+      `<tr><th>${label}</th>${werte.map(v => `<td>${escapeHtml(String(v))}</td>`).join("")}</tr>`;
+
+    body.innerHTML = `
+      <div class="worklog-scroll">
+        <table class="worklog-table">
+          <thead><tr><th>Tag</th>${kopf}</tr></thead>
+          <tbody>
+            ${zeile("Stundenlohn", summaries.map(s => s.rates))}
+            ${zeile("Stunden", summaries.map(s => s.hours.toLocaleString("de-DE", { maximumFractionDigits: 2 })))}
+            ${zeile("Personen", summaries.map(s => s.persons))}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function openEmployeeDetail(deviceId, name) {
+    employeeDetailDeviceId = deviceId;
+    document.getElementById("employee-detail-name").textContent = name;
+    document.getElementById("employee-detail-sub").textContent =
+      `Arbeitstage im ${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}.`;
+    renderEmployeeDetail();
+    employeeDetailOverlay.classList.add("active");
+  }
+
+  function closeEmployeeDetail() {
+    employeeDetailOverlay.classList.remove("active");
+    employeeDetailDeviceId = null;
+  }
+
+  document.getElementById("ag-employee-list").addEventListener("click", (e) => {
+    if (e.target.closest(".row-remove")) return;   // das Kreuz hat Vorrang
+    const row = e.target.closest(".employee-row-clickable");
+    if (!row) return;
+    const name = row.querySelector(".employee-name").textContent;
+    openEmployeeDetail(row.dataset.deviceId, name);
+  });
+
+  document.getElementById("employee-detail-close").addEventListener("click", closeEmployeeDetail);
+  employeeDetailOverlay.addEventListener("click", (e) => {
+    if (e.target === employeeDetailOverlay) closeEmployeeDetail();
+  });
 
   // ---------- Verbundene Auftraggeber (Auftragnehmer) ----------
   function renderConnectedEmployers() {
@@ -1005,6 +1144,19 @@
     });
     saveWorkHistory();
 
+    saveWorkLogToFirebase({
+      employerCode: session.employerCode,
+      deviceId: getOrCreateDeviceId(),
+      name: workerName(),
+      date: formatDateKey(new Date(session.startTime)),
+      rate: session.rate,
+      persons: session.persons,
+      extraRates,
+      hours,
+      earnings,
+      endTime,
+    });
+
     state.workSession = null;
     saveWorkSession();
     saveWorkSessionToFirebase(workerEmail(), null);
@@ -1147,14 +1299,16 @@
     if (state.employees.length === 0) {
       monthlyList.innerHTML = `<div class="appointment-empty">Für diesen Monat liegen noch keine Mitarbeiterdaten vor.</div>`;
     } else {
-      const sorted = [...state.employees].sort((a, b) => b.hours - a.hours);
+      const sorted = state.employees
+        .map(emp => ({ ...emp, monthHours: monthlyHoursFor(emp.deviceId, now) }))
+        .sort((a, b) => b.monthHours - a.monthHours);
       monthlyList.innerHTML = sorted.map(emp => `
         <div class="employee-row">
           <div class="employee-avatar">${escapeHtml(emp.initials || emp.name.slice(0, 2).toUpperCase())}</div>
           <div class="employee-info">
             <div class="employee-name">${escapeHtml(emp.name)}</div>
           </div>
-          <span class="employee-status status-active">${emp.hours.toLocaleString("de-DE")} Std.</span>
+          <span class="employee-status status-active">${emp.monthHours.toLocaleString("de-DE", { maximumFractionDigits: 2 })} Std.</span>
         </div>
       `).join("");
     }
@@ -1499,6 +1653,7 @@
     subscribeAppointmentsForAG(inviteCode);
     subscribeNotificationsForAG(inviteCode);
     subscribeInvitesForAG(inviteCode);
+    subscribeWorkLogsForAG(inviteCode);
 
     resetNavAg();
     showView("view-app-ag");

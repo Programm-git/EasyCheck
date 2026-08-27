@@ -1191,6 +1191,52 @@ body.show-nav .footer {
   color: var(--text-dim);
   background: rgba(255, 255, 255, 0.08);
 }
+.employee-row-clickable {
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.employee-row-clickable:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--accent);
+}
+
+/* ---------- Arbeitstage-Tabelle (Mitarbeiter-Detail) ---------- */
+.worklog-scroll {
+  overflow-x: auto;
+  margin-bottom: 18px;
+  -webkit-overflow-scrolling: touch;
+}
+.worklog-table {
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+.worklog-table th,
+.worklog-table td {
+  border: 1px solid var(--surface-border);
+  padding: 9px 12px;
+  text-align: center;
+}
+.worklog-table thead th {
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+/* erste Spalte als Beschriftung stehen lassen, auch beim seitlichen Scrollen */
+.worklog-table tbody th,
+.worklog-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: #1b1830;
+}
+.worklog-table tbody td {
+  color: var(--text);
+}
+
 .row-remove {
   width: 30px;
   height: 30px;
