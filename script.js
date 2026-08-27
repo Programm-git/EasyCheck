@@ -704,33 +704,33 @@
   const employeeDetailOverlay = document.getElementById("employee-detail-overlay");
   let employeeDetailDeviceId = null;
 
-  function formatMoney(value) {
-    return value.toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " €";
+  function formatAmount(value) {
+    return value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
   }
 
-  // Fasst alle Sitzungen eines Tages zu Gruppen je Stundenlohn zusammen,
-  // damit Lohn und Personenzahl in der Tabelle untereinander passen.
-  function summarizeDay(logs) {
+  // Ergibt die Tabellenzeilen eines Tages. Zusammengefasst wird nur, was
+  // denselben Stundenlohn UND dieselbe Personenzahl hat - sonst waere der
+  // zu zahlende Betrag falsch. Ein Zusatzlohn wird zu einer eigenen Zeile.
+  function dayRows(logs) {
     const groups = new Map();
-    let hours = 0;
     logs.forEach(log => {
-      hours += log.hours || 0;
       const parts = [{ rate: log.rate, persons: log.persons }].concat(
         (log.extraRates || []).map(e => (typeof e === "number" ? { rate: e, persons: 1 } : e))
       );
       parts.forEach(part => {
-        if (!(part.rate > 0)) return;
-        // Bei mehreren Sitzungen am selben Tag der höchste Wert, nicht die Summe:
-        // zweimal eine Person ist dieselbe Person, nicht zwei.
-        groups.set(part.rate, Math.max(groups.get(part.rate) || 0, part.persons || 0));
+        if (!(part.rate > 0) || !(part.persons > 0)) return;
+        const key = `${part.rate}|${part.persons}`;
+        const prev = groups.get(key);
+        if (prev) {
+          prev.hours += log.hours || 0;
+        } else {
+          groups.set(key, { rate: part.rate, persons: part.persons, hours: log.hours || 0 });
+        }
       });
     });
-    const sorted = [...groups.entries()].sort((a, b) => b[0] - a[0]);
-    return {
-      hours,
-      rates: sorted.map(([rate]) => formatMoney(rate)).join(" + ") || "–",
-      persons: sorted.map(([, persons]) => persons).join(" + ") || "–",
-    };
+    return [...groups.values()]
+      .sort((a, b) => b.rate - a.rate)
+      .map(g => ({ ...g, amount: g.hours * g.rate * g.persons }));
   }
 
   function monthlyHoursFor(deviceId, when) {
@@ -765,42 +765,48 @@
       byDay.get(log.date).push(log);
     });
     const days = [...byDay.keys()].sort();
-    const summaries = days.map(day => summarizeDay(byDay.get(day)));
     const todayKey = formatDateKey(now);
-    const heute = days.map(day => day === todayKey);
 
-    const kopf = days.map((day, i) => {
+    let gesamt = 0;
+    const zeilen = days.map(day => {
+      const rows = dayRows(byDay.get(day));
       const [, month, dayOfMonth] = day.split("-").map(Number);
-      return `<th class="${heute[i] ? "is-today" : ""}">
-        <span class="worklog-day">${dayOfMonth}</span>
-        <span class="worklog-month">${monthShort[month - 1]}</span>
-      </th>`;
+      const datum = `${String(dayOfMonth).padStart(2, "0")}.${String(month).padStart(2, "0")}.`;
+      return rows.map((row, i) => {
+        gesamt += row.amount;
+        return `<tr class="${day === todayKey ? "is-today" : ""}">
+          <th>${i === 0 ? datum : ""}</th>
+          <td>${row.persons}</td>
+          <td>${row.hours.toLocaleString("de-DE", { maximumFractionDigits: 2 })}</td>
+          <td>${escapeHtml(formatAmount(row.rate))}</td>
+          <td class="worklog-amount">${escapeHtml(formatAmount(row.amount))}</td>
+        </tr>`;
+      }).join("");
     }).join("");
 
-    const zeile = (icon, label, werte, klasse) =>
-      `<tr class="${klasse}">
-        <th><span class="worklog-icon">${icon}</span>${label}</th>
-        ${werte.map((v, i) => `<td class="${heute[i] ? "is-today" : ""}">${escapeHtml(String(v))}</td>`).join("")}
-      </tr>`;
-
-    const gesamt = summaries.reduce((sum, s) => sum + s.hours, 0);
-
     body.innerHTML = `
+      <div class="worklog-title">Lohnübersicht</div>
       <div class="worklog-scroll">
         <table class="worklog-table">
-          <thead><tr><th>Tag</th>${kopf}</tr></thead>
-          <tbody>
-            ${zeile("💶", "Stundenlohn", summaries.map(s => s.rates), "")}
-            ${zeile("⏱", "Stunden", summaries.map(s => s.hours.toLocaleString("de-DE", { maximumFractionDigits: 2 })), "worklog-row-hours")}
-            ${zeile("👥", "Personen", summaries.map(s => s.persons), "")}
-          </tbody>
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th><span class="th-lang">Personen</span><span class="th-kurz">Pers.</span></th>
+              <th><span class="th-lang">Stunden</span><span class="th-kurz">Std.</span></th>
+              <th><span class="th-lang">Lohn / Std.</span><span class="th-kurz">Lohn</span></th>
+              <th>Zu zahlen</th>
+            </tr>
+          </thead>
+          <tbody>${zeilen}</tbody>
+          <tfoot>
+            <tr>
+              <th>Gesamt</th><td></td><td></td><td></td>
+              <td class="worklog-amount">${escapeHtml(formatAmount(gesamt))}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
-      <div class="worklog-footer">
-        <span>${days.length} ${days.length === 1 ? "Arbeitstag" : "Arbeitstage"}</span>
-        <span class="worklog-total">${gesamt.toLocaleString("de-DE", { maximumFractionDigits: 2 })} Std. gesamt</span>
-      </div>
-      <div class="worklog-hint hidden">Seitlich wischen für weitere Tage</div>`;
+      <div class="worklog-hint hidden">Seitlich wischen für alle Spalten</div>`;
 
     // Hinweis nur zeigen, wenn die Tabelle wirklich breiter ist als der Platz
     const scroller = body.querySelector(".worklog-scroll");
@@ -816,7 +822,7 @@
     employeeDetailDeviceId = deviceId;
     document.getElementById("employee-detail-name").textContent = name;
     document.getElementById("employee-detail-sub").textContent =
-      `Arbeitstage im ${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}.`;
+      `${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
     // erst einblenden, dann rendern: solange der Dialog verborgen ist, sind
     // alle Breiten 0 und der Wisch-Hinweis liesse sich nicht ermitteln
     employeeDetailOverlay.classList.add("active");

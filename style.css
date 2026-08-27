@@ -1200,7 +1200,15 @@ body.show-nav .footer {
   border-color: var(--accent);
 }
 
-/* ---------- Arbeitstage-Tabelle (Mitarbeiter-Detail) ---------- */
+/* ---------- Lohnuebersicht (Mitarbeiter-Detail) ---------- */
+.worklog-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  margin-bottom: 12px;
+}
 .worklog-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -1209,112 +1217,121 @@ body.show-nav .footer {
   border-collapse: separate;
   border-spacing: 0;
   width: 100%;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   white-space: nowrap;
-  /* gleich breite Ziffern, damit die Zahlen spaltenweise untereinander stehen */
+  /* gleich breite Ziffern, damit die Betraege spaltenweise untereinanderstehen */
   font-variant-numeric: tabular-nums;
 }
 .worklog-table th,
 .worklog-table td {
-  padding: 10px 16px;
-  text-align: center;
   border: none;
+  padding: 9px 14px;
+  text-align: right;
+}
+.worklog-table th:first-child,
+.worklog-table td:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+.worklog-table th:last-child,
+.worklog-table td:last-child {
+  padding-right: 0;
 }
 
-/* Kopfzeile: Tag gross, Monat klein darunter */
+/* Spaltenueberschriften */
 .worklog-table thead th {
-  color: var(--text);
-  line-height: 1.15;
-  padding-bottom: 14px;
-}
-.worklog-day {
-  display: block;
-  font-size: 1.05rem;
-  font-weight: 700;
-}
-.worklog-month {
-  display: block;
   font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--text-dim);
+  padding-bottom: 12px;
 }
 
-/* Beschriftungsspalte bleibt beim seitlichen Wischen stehen. */
+/* Datumsspalte bleibt beim seitlichen Wischen stehen */
 .worklog-table tbody th,
+.worklog-table tfoot th,
 .worklog-table thead th:first-child {
   position: sticky;
   left: 0;
   z-index: 2;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  padding-left: 0;
-  padding-right: 22px;
   background: transparent;
   transition: background 0.15s ease;
 }
-/* Deckender Hintergrund erst beim Wischen - sonst schoeben sich die Zahlen
-   darunter hindurch. Unverschoben bliebe sonst ein Kasten ohne Zweck stehen. */
+/* Deckender Hintergrund erst beim Wischen - sonst schieben sich die Zahlen
+   darunter hindurch. Unverschoben stuende dort sonst ein Kasten ohne Zweck. */
 .worklog-scroll.is-scrolled .worklog-table tbody th,
+.worklog-scroll.is-scrolled .worklog-table tfoot th,
 .worklog-scroll.is-scrolled .worklog-table thead th:first-child {
   background: #17142a;
   box-shadow: 10px 0 14px -10px rgba(0, 0, 0, 0.85);
 }
-.worklog-table thead th:first-child {
-  font-size: 0.66rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.worklog-icon {
-  margin-right: 7px;
-  opacity: 0.85;
+
+/* Datenzeilen */
+.worklog-table tbody th {
+  font-weight: 600;
+  font-size: 0.84rem;
+  color: var(--text-dim);
 }
 .worklog-table tbody td {
   color: var(--text);
 }
-/* die Stundenzeile ist die wichtigste Zahl */
-.worklog-row-hours td {
-  font-size: 1.05rem;
+/* der zu zahlende Betrag ist die entscheidende Zahl */
+.worklog-amount {
   font-weight: 700;
   color: var(--accent2);
 }
-/* heutiger Tag: nur die Tageszahl als Plakette, ohne Kasten um die Spalte */
-.worklog-table thead th.is-today .worklog-day {
-  background: var(--accent-grad);
-  border-radius: 999px;
-  padding: 2px 0;
-  margin-bottom: 2px;
-  color: #fff;
-}
-.worklog-table thead th.is-today .worklog-month {
-  color: var(--accent2);
+/* heutiger Tag hervorgehoben, ohne Kasten */
+.worklog-table tbody tr.is-today th {
+  color: var(--accent);
 }
 
-.worklog-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-  margin-bottom: 4px;
-  font-size: 0.8rem;
-  color: var(--text-dim);
-}
-.worklog-total {
+/* Gesamtzeile */
+.worklog-table tfoot th,
+.worklog-table tfoot td {
+  padding-top: 16px;
   font-weight: 700;
   color: var(--text);
-  background: rgba(46, 230, 166, 0.14);
-  border-radius: 999px;
-  padding: 5px 12px;
 }
+.worklog-table tfoot th {
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.worklog-table tfoot .worklog-amount {
+  font-size: 1.1rem;
+  color: var(--success);
+}
+
 .worklog-hint {
   font-size: 0.74rem;
   color: var(--text-dim);
   text-align: center;
-  margin-bottom: 14px;
+  margin-top: 14px;
+}
+.th-kurz {
+  display: none;
+}
+/* Auf dem Handy enger setzen und die Ueberschriften kuerzen. Sonst faellt
+   ausgerechnet "Zu zahlen" aus dem Bild und muesste erst herangewischt werden. */
+@media (max-width: 520px) {
+  .worklog-table {
+    font-size: 0.8rem;
+  }
+  .worklog-table th,
+  .worklog-table td {
+    padding: 9px 6px;
+  }
+  .worklog-table tfoot .worklog-amount {
+    font-size: 1rem;
+  }
+  .th-lang {
+    display: none;
+  }
+  .th-kurz {
+    display: inline;
+  }
 }
 /* Tabellen brauchen mehr Platz als die uebrigen Dialoge */
 #employee-detail-overlay .modal-box {
