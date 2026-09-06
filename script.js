@@ -120,10 +120,54 @@
     });
   }
 
-  // ---------- Einladungen per E-Mail (Auftraggeber lädt Auftragnehmer ein) ----------
   function normalizeEmail(email) {
     return (email || "").trim().toLowerCase();
   }
+
+  // ---------- Konten (geräteübergreifende Anmeldung per E-Mail) ----------
+  // Vorher wurde die Identität rein pro Gerät gespeichert: "Anmelden" hat nie
+  // geprüft, welche E-Mail eingegeben wurde, sondern einfach die Person geladen,
+  // die zuletzt auf GENAU DIESEM Gerät registriert/angemeldet war. Auf einem
+  // Gerät, das schon jemand anderes benutzt hatte, wurde man dadurch als diese
+  // andere Person angemeldet. Jetzt ist die E-Mail-Adresse der Schlüssel, das
+  // Konto liegt in Firestore und wird von dort geladen - unabhängig vom Gerät.
+  function accountDocId(role, email) {
+    return `${role}_${normalizeEmail(email)}`;
+  }
+
+  function loadAccountFromFirebase(role, email) {
+    return onFirebaseReady.then((firebase) => {
+      if (!firebase) return null;
+      try {
+        const ref = firebase.doc(firebase.db, "accounts", accountDocId(role, email));
+        return firebase.getDoc(ref).then(snap => (snap.exists() ? snap.data() : null)).catch(() => null);
+      } catch (e) {
+        // Ein synchroner Fehler (statt einer abgelehnten Promise) darf die
+        // Anmeldung nicht für immer haengen lassen.
+        return null;
+      }
+    });
+  }
+
+  function saveAccountToFirebase(role, email, data) {
+    onFirebaseReady.then((firebase) => {
+      if (!firebase) return;
+      const ref = firebase.doc(firebase.db, "accounts", accountDocId(role, email));
+      firebase.setDoc(ref, { role, email: normalizeEmail(email), ...data }, { merge: true }).catch(() => {});
+    });
+  }
+
+  // Lässt eine Suche/ein Schreibvorgang nicht endlos haengen, wenn Firebase
+  // nicht erreichbar ist (kein Netz, CDN blockiert) - sonst würde der
+  // Anmelden/Registrieren-Button ewig nichts tun.
+  function withTimeout(promise, ms, fallbackValue) {
+    return Promise.race([
+      promise,
+      new Promise(resolve => setTimeout(() => resolve(fallbackValue), ms)),
+    ]);
+  }
+
+  // ---------- Einladungen per E-Mail (Auftraggeber lädt Auftragnehmer ein) ----------
 
   let unsubscribeInvites = null;
   function subscribeInvitesForAG(code) {
@@ -394,17 +438,18 @@
   }
 
   const INVITE_CODE_KEY = "easycheck-invite-code";
+  function peekLocalInviteCode() {
+    try { return localStorage.getItem(INVITE_CODE_KEY); } catch (e) { return null; }
+  }
+  function setInviteCode(code) {
+    try { localStorage.setItem(INVITE_CODE_KEY, code); } catch (e) {}
+  }
   function getOrCreateInviteCode() {
-    try {
-      let code = localStorage.getItem(INVITE_CODE_KEY);
-      if (!code) {
-        code = generateInviteCode();
-        localStorage.setItem(INVITE_CODE_KEY, code);
-      }
-      return code;
-    } catch (e) {
-      return generateInviteCode();
-    }
+    const existing = peekLocalInviteCode();
+    if (existing) return existing;
+    const code = generateInviteCode();
+    setInviteCode(code);
+    return code;
   }
 
   const AUTO_ACCEPT_KEY = "easycheck-auto-accept";
@@ -1499,6 +1544,8 @@
     if (!newName) return;
 
     saveName(editingNameRole, newName);
+    const accountEmail = loadEmail(editingNameRole);
+    if (accountEmail) saveAccountToFirebase(editingNameRole, accountEmail, { name: newName });
 
     if (editingNameRole === "auftragnehmer") {
       document.getElementById("an-welcome-name").textContent = newName;
@@ -1543,24 +1590,47 @@
   document.getElementById("form-register").addEventListener("submit", (e) => {
     e.preventDefault();
     if (!pendingRegisterRole) return;
+    const role = pendingRegisterRole;
+    pendingRegisterRole = null;
 
     const email = document.getElementById("reg-email").value.trim();
     const password = document.getElementById("reg-password").value;
     const errorEl = document.getElementById("reg-error");
+    const submitBtn = document.querySelector("#form-register button[type=submit]");
 
     if (!email || !password) {
       errorEl.textContent = "Bitte fülle alle Felder aus.";
       return;
     }
     errorEl.textContent = "";
-    document.getElementById("form-register").reset();
+    submitBtn.disabled = true;
 
-    if (pendingRegisterRole === "auftragnehmer") {
-      goToAuftragnehmerDashboard(nameFromEmail(email), email);
-    } else {
-      goToAuftraggeberDashboard(nameFromEmail(email), email);
-    }
-    pendingRegisterRole = null;
+    withTimeout(loadAccountFromFirebase(role, email), 4000, null).then((existing) => {
+      // Ein bereits vorhandenes Konto (z. B. erneutes Registrieren nach
+      // Neuinstallation) wird eingeloggt statt überschrieben.
+      const name = existing ? existing.name : nameFromEmail(email);
+      const address = existing ? existing.address : undefined;
+      // Migration: ein AG, der schon vor dieser Umstellung einen Einladungscode
+      // auf DIESEM Gerät hatte, behält ihn - sonst würden bestehende
+      // Mitarbeiter-Verbindungen durch einen neuen Code auseinanderbrechen.
+      const inviteCode = role === "auftraggeber"
+        ? (existing && existing.inviteCode) || peekLocalInviteCode() || generateInviteCode()
+        : undefined;
+
+      saveAccountToFirebase(role, email, {
+        name,
+        ...(role === "auftraggeber" ? { address: address || "", inviteCode } : {}),
+      });
+
+      document.getElementById("form-register").reset();
+      submitBtn.disabled = false;
+
+      if (role === "auftragnehmer") {
+        goToAuftragnehmerDashboard(name, email);
+      } else {
+        goToAuftraggeberDashboard(name, email, address, inviteCode);
+      }
+    });
   });
 
   document.getElementById("form-login").addEventListener("submit", (e) => {
@@ -1568,27 +1638,70 @@
     const email = document.getElementById("login-email").value.trim();
     const password = document.getElementById("login-password").value;
     const errorEl = document.getElementById("login-error");
+    const submitBtn = document.querySelector("#form-login button[type=submit]");
 
     if (!email || !password) {
       errorEl.textContent = "Bitte fülle alle Felder aus.";
       return;
     }
-
-    const role = getLastRole();
-    const storedName = role ? loadName(role) : null;
-    if (!role || !storedName) {
-      errorEl.textContent = "Kein Konto gefunden. Bitte registriere dich zuerst.";
-      return;
-    }
     errorEl.textContent = "";
-    document.getElementById("form-login").reset();
+    submitBtn.disabled = true;
 
-    saveEmail(role, email);
-    if (role === "auftragnehmer") {
-      goToAuftragnehmerDashboard(storedName, email);
-    } else {
-      goToAuftraggeberDashboard(storedName, email, loadAddress());
-    }
+    Promise.all([
+      withTimeout(loadAccountFromFirebase("auftragnehmer", email), 4000, undefined),
+      withTimeout(loadAccountFromFirebase("auftraggeber", email), 4000, undefined),
+    ]).then(([an, ag]) => {
+      let role = null;
+      let account = null;
+      if (an && ag) {
+        // Dieselbe E-Mail existiert unter beiden Rollen (selten) - die zuletzt
+        // auf diesem Gerät genutzte Rolle entscheidet.
+        role = getLastRole() === "auftraggeber" ? "auftraggeber" : "auftragnehmer";
+        account = role === "auftraggeber" ? ag : an;
+      } else if (an) {
+        role = "auftragnehmer";
+        account = an;
+      } else if (ag) {
+        role = "auftraggeber";
+        account = ag;
+      }
+
+      if (!account) {
+        // Firebase evtl. nicht erreichbar (Timeout lieferte "undefined", nicht
+        // "kein Konto gefunden") - als letzten Ausweg die zuletzt auf DIESEM
+        // Geraet genutzte Identitaet annehmen, damit die App auch offline auf
+        // dem eigenen, bereits genutzten Geraet weiter funktioniert.
+        const fallbackRole = getLastRole();
+        const fallbackName = fallbackRole ? loadName(fallbackRole) : null;
+        if (fallbackRole && fallbackName) {
+          role = fallbackRole;
+          account = { name: fallbackName, address: loadAddress(), inviteCode: peekLocalInviteCode() };
+          // Bestandskonto von vor diesem Update: in Firestore nachtragen, damit
+          // ein zweites Gerät es ab jetzt findet. Schadet nicht, falls die
+          // Ursache eigentlich ein Netzwerkproblem war - der Schreibversuch
+          // schlägt dann einfach folgenlos fehl (siehe saveAccountToFirebase).
+          saveAccountToFirebase(role, email, {
+            name: account.name,
+            ...(role === "auftraggeber" ? { address: account.address || "", inviteCode: account.inviteCode } : {}),
+          });
+        }
+      }
+
+      submitBtn.disabled = false;
+
+      if (!account) {
+        errorEl.textContent = "Kein Konto gefunden. Bitte registriere dich zuerst.";
+        return;
+      }
+
+      document.getElementById("form-login").reset();
+      saveLastRole(role);
+      if (role === "auftragnehmer") {
+        goToAuftragnehmerDashboard(account.name, email);
+      } else {
+        goToAuftraggeberDashboard(account.name, email, account.address, account.inviteCode);
+      }
+    });
   });
 
   document.getElementById("btn-logout-an").addEventListener("click", () => showView("view-start"));
@@ -1623,14 +1736,15 @@
   const resetNavAg = setupBottomNav("bottom-nav-ag", "view-app-ag");
 
   function goToAuftragnehmerDashboard(name, email) {
+    // name/email kommen jetzt immer schon geprüft aus Firestore (Register/Login) -
+    // hier nur noch den lokalen Geräte-Cache damit überschreiben, nie umgekehrt.
+    // Sonst würde auf einem Gerät, das schon jemand anderes benutzt hat, weiter
+    // dessen alter lokaler Name gewinnen.
     saveLastRole("auftragnehmer");
-    const storedName = loadName("auftragnehmer");
-    const finalName = storedName || name;
-    if (!storedName) saveName("auftragnehmer", finalName);
-
-    const storedEmail = loadEmail("auftragnehmer");
-    const finalEmail = storedEmail || email;
-    if (!storedEmail) saveEmail("auftragnehmer", finalEmail);
+    saveName("auftragnehmer", name);
+    saveEmail("auftragnehmer", email);
+    const finalName = name;
+    const finalEmail = email;
 
     const extra = `<div><b>E-Mail:</b> ${escapeHtml(finalEmail)}</div>`;
 
@@ -1651,19 +1765,18 @@
     showView("view-app-an");
   }
 
-  function goToAuftraggeberDashboard(name, email, address) {
+  function goToAuftraggeberDashboard(name, email, address, inviteCode) {
+    // Wie bei goToAuftragnehmerDashboard: die übergebenen Werte stammen jetzt
+    // aus dem Firestore-Konto und überschreiben den lokalen Geräte-Cache immer,
+    // statt sich einem älteren lokalen Wert unterzuordnen.
     saveLastRole("auftraggeber");
-    const storedName = loadName("auftraggeber");
-    const finalName = storedName || name;
-    if (!storedName) saveName("auftraggeber", finalName);
-
-    const storedEmail = loadEmail("auftraggeber");
-    const finalEmail = storedEmail || email;
-    if (!storedEmail) saveEmail("auftraggeber", finalEmail);
-
-    const storedAddress = loadAddress();
-    const finalAddress = storedAddress || address || "";
-    if (!storedAddress && address) saveAddress(address);
+    saveName("auftraggeber", name);
+    saveEmail("auftraggeber", email);
+    const finalName = name;
+    const finalEmail = email;
+    const finalAddress = address || "";
+    if (address) saveAddress(address);
+    if (inviteCode) setInviteCode(inviteCode);
 
     const extra = `<div><b>E-Mail:</b> ${escapeHtml(finalEmail)}</div>` +
       (finalAddress ? `<div><b>Adresse:</b> ${escapeHtml(finalAddress)}</div>` : "");
@@ -1676,16 +1789,16 @@
     document.getElementById("ag-account-summary").innerHTML =
       `<div class="editable-name" id="ag-name-edit-trigger"><b>Name:</b> <span id="ag-name-value">${escapeHtml(finalName)}</span> <span class="edit-pencil">✏️</span></div>` + extra;
 
-    const inviteCode = getOrCreateInviteCode();
-    inviteCodeEl.textContent = inviteCode;
+    const finalInviteCode = getOrCreateInviteCode();
+    inviteCodeEl.textContent = finalInviteCode;
 
     document.getElementById("ag-stat-mitarbeiter").textContent = state.employees.length;
     renderEmployeeList();
-    subscribeEmployeesForCode(inviteCode);
-    subscribeAppointmentsForAG(inviteCode);
-    subscribeNotificationsForAG(inviteCode);
-    subscribeInvitesForAG(inviteCode);
-    subscribeWorkLogsForAG(inviteCode);
+    subscribeEmployeesForCode(finalInviteCode);
+    subscribeAppointmentsForAG(finalInviteCode);
+    subscribeNotificationsForAG(finalInviteCode);
+    subscribeInvitesForAG(finalInviteCode);
+    subscribeWorkLogsForAG(finalInviteCode);
 
     resetNavAg();
     showView("view-app-ag");
