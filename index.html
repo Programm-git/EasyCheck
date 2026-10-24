@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EasyCheck – Einfach. Sicher. Checken.</title>
-<link rel="stylesheet" href="style.css?v=52">
+<link rel="stylesheet" href="style.css?v=53">
 </head>
 <body>
 
@@ -70,7 +70,10 @@
         </div>
         <div class="field">
           <label for="reg-password">Passwort</label>
-          <input type="password" id="reg-password" required minlength="6" placeholder="Mindestens 6 Zeichen">
+          <div class="password-field">
+            <input type="password" id="reg-password" required minlength="6" placeholder="Mindestens 6 Zeichen">
+            <button type="button" class="password-toggle" data-target="reg-password" aria-label="Passwort anzeigen">👁️</button>
+          </div>
         </div>
 
         <div class="error-msg" id="reg-error"></div>
@@ -94,7 +97,10 @@
         </div>
         <div class="field">
           <label for="login-password">Passwort</label>
-          <input type="password" id="login-password" required minlength="6" placeholder="Mindestens 6 Zeichen">
+          <div class="password-field">
+            <input type="password" id="login-password" required minlength="6" placeholder="Mindestens 6 Zeichen">
+            <button type="button" class="password-toggle" data-target="login-password" aria-label="Passwort anzeigen">👁️</button>
+          </div>
         </div>
 
         <div class="error-msg" id="login-error"></div>
@@ -587,6 +593,6 @@
 </div>
 
 <script type="module" src="firebase-init.js?v=5"></script>
-<script src="script.js?v=55"></script>
+<script src="script.js?v=56"></script>
 </body>
 </html>

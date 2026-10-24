@@ -1560,12 +1560,37 @@
     closeEditNameModal();
   });
 
+  // ---------- Passwort anzeigen/verbergen ----------
+  function hidePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const btn = document.querySelector(`.password-toggle[data-target="${inputId}"]`);
+    if (input) input.type = "password";
+    if (btn) {
+      btn.textContent = "👁️";
+      btn.setAttribute("aria-label", "Passwort anzeigen");
+      btn.classList.remove("is-visible");
+    }
+  }
+
+  document.querySelectorAll(".password-toggle").forEach(btn => {
+    const input = document.getElementById(btn.dataset.target);
+    if (!input) return;
+    btn.addEventListener("click", () => {
+      const showing = input.type === "text";
+      input.type = showing ? "password" : "text";
+      btn.textContent = showing ? "👁️" : "🙈";
+      btn.setAttribute("aria-label", showing ? "Passwort anzeigen" : "Passwort verbergen");
+      btn.classList.toggle("is-visible", !showing);
+    });
+  });
+
   let pendingRegisterRole = null;
 
   document.getElementById("btn-register").addEventListener("click", () => showView("view-role"));
   document.getElementById("btn-login").addEventListener("click", () => {
     document.getElementById("login-error").textContent = "";
     document.getElementById("form-login").reset();
+    hidePassword("login-password");
     showView("view-login");
   });
 
@@ -1577,6 +1602,7 @@
     pendingRegisterRole = "auftragnehmer";
     document.getElementById("reg-error").textContent = "";
     document.getElementById("form-register").reset();
+    hidePassword("reg-password");
     showView("view-register");
   });
 
@@ -1584,6 +1610,7 @@
     pendingRegisterRole = "auftraggeber";
     document.getElementById("reg-error").textContent = "";
     document.getElementById("form-register").reset();
+    hidePassword("reg-password");
     showView("view-register");
   });
 
@@ -1623,6 +1650,7 @@
       });
 
       document.getElementById("form-register").reset();
+      hidePassword("reg-password");
       submitBtn.disabled = false;
 
       if (role === "auftragnehmer") {
@@ -1695,6 +1723,7 @@
       }
 
       document.getElementById("form-login").reset();
+      hidePassword("login-password");
       saveLastRole(role);
       if (role === "auftragnehmer") {
         goToAuftragnehmerDashboard(account.name, email);
